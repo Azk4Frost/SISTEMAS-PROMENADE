@@ -1,0 +1,20 @@
+PROMENADE COUNTRY CLUB — versão simples (HTML e CSS)
+
+Como abrir
+1. Descompacte esta pasta.
+2. Abra o arquivo index.html com dois cliques (ele abre no navegador).
+   Nada precisa ser instalado e não precisa de internet, exceto a fonte
+   Plus Jakarta Sans, que vem do Google Fonts. Se estiver sem internet,
+   o site abre do mesmo jeito com a fonte padrão do computador.
+
+O que tem dentro
+- index.html  -> a página
+- styles.css  -> todas as cores, fontes e ajustes de tela
+- assets/     -> a foto do clube e o logotipo
+
+Para editar
+- Texto: abra o index.html em um editor de texto (Bloco de Notas, VS Code).
+- Cores e tamanhos: abra o styles.css. As cores estão no começo do arquivo,
+  na lista entre chaves (ex.: --navy: #116BB5; é o azul dos detalhes).
+
+A página funciona em computador, tablet e celular.
