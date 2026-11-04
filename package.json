@@ -1,0 +1,13 @@
+{
+  "name": "promenade-hub",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.cjs -i PROMENADEHUB/sistemas/gestao_de_uniforme/input.css -o PROMENADEHUB/sistemas/gestao_de_uniforme/styles.css --minify",
+    "watch:css": "npm run build:css -- --watch",
+    "start": "python3 -m http.server 8000 --bind 127.0.0.1 --directory PROMENADEHUB",
+    "test": "node --test --test-isolation=none tests/*.test.js"
+  },
+  "devDependencies": { "tailwindcss": "3.4.17" }
+}
