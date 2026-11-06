@@ -100,6 +100,9 @@ function renderLoan(loan) {
   person.append(element('span', 'cell-primary', employee.name ?? '—'));
   const details = [employee.registration, employee.department].filter(Boolean).join(' · ');
   person.append(element('span', 'cell-secondary', details));
+  if(loan.origin==='opening') person.append(element('span','cell-secondary','Saldo inicial · registro de abertura'));
+  if(loan.responsibleName) person.append(element('span','cell-secondary',`Entregou: ${loan.responsibleName}`));
+  else if(loan.origin==='opening') person.append(element('span','cell-secondary','Entrega original não informada'));
   const items = element('td');
   for (const item of loan.items ?? []) {
     const label = [item.label, item.size].filter(Boolean).join(' · ');
@@ -202,7 +205,7 @@ function renderSummary() {
   });
   $('#connection-label').textContent = loadingFailed ? 'Falha na consulta' : connected ? 'Dados consultados' : 'Integração de dados pendente';
   const message = loadingFailed ? 'Falha ao consultar os dados. Tente novamente.'
-    : connected ? 'Dados carregados. Os filtros consultam os registros exibidos nesta página.'
+    : connected ? (dashboard.loans.some(loan=>loan.origin==='opening')?`Dados consultados. INICIAL identifica saldos de abertura, sem recriar empréstimos antigos. Saldo inicial com funcionários: ${dashboard.indicators?.openingHeldPieces??0} peças.`:'Dados carregados. Os filtros consultam os registros exibidos nesta página.')
     : 'Dados operacionais ainda não conectados. Os traços (—) indicam valores indisponíveis, não estoque zerado.';
   $('#data-notice span').textContent = message;
   $('#data-notice').classList.toggle('is-error', loadingFailed);

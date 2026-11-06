@@ -13,7 +13,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
       server.close();
       process.exitCode = 1;
     });
-    server.listen(port, '127.0.0.1', () => console.log(`Servidor local iniciado na porta ${port}. Uniformes disponível no modo local, sem login.`));
+    server.listen(port, '127.0.0.1', () => console.log(`Servidor local iniciado na porta ${port}. Uniformes disponível no modo local, sem login. Abra http://127.0.0.1:${port}/sistemas/gestao_de_uniforme/`));
     const stop = () => { server.close(); server.closeIdleConnections(); };
     process.once('SIGINT', stop);
     process.once('SIGTERM', stop);

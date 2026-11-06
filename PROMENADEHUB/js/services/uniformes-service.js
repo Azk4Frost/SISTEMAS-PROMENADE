@@ -36,3 +36,8 @@ export const loadLaundryDispatchItems=()=>request('/laundry/dispatch');
 export const dispatchUniformesToLaundry=(payload)=>request('/laundry/dispatch',{payload});
 export const loadLaundryReceiptItems=()=>request('/laundry/receive');
 export const receiveUniformesFromLaundry=(payload)=>request('/laundry/receive',{payload});
+
+export const loadUniformesCatalog=()=>request('/catalog');
+export const saveUniformesCatalogRecord=(kind,payload)=>request(`/catalog/${kind}`,{payload});
+export const openUniformesStock=(payload)=>request('/stock/open',{payload});
+export const addUniformesStock=(payload)=>request('/stock/add',{payload});

@@ -16,4 +16,19 @@ CREATE TABLE movements(id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER REF
  kind TEXT NOT NULL CHECK(kind IN ('opening','stock-add','loan','return','dispatch','receive')), quantity INTEGER NOT NULL CHECK(quantity>0), happened_at TEXT NOT NULL) STRICT;
 CREATE TABLE drafts(id INTEGER PRIMARY KEY AUTOINCREMENT, payload TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1, updated_at TEXT NOT NULL) STRICT;
 CREATE TABLE requests(key TEXT PRIMARY KEY, operation TEXT NOT NULL, hash TEXT NOT NULL, result TEXT NOT NULL, created_at TEXT NOT NULL) STRICT;
+` }, { version: 2, sql: `
+ALTER TABLE sectors ADD COLUMN version INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE employees ADD COLUMN version INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE responsibles ADD COLUMN version INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE uniforms ADD COLUMN version INTEGER NOT NULL DEFAULT 1;
+CREATE TABLE opening_lots(
+ id INTEGER PRIMARY KEY AUTOINCREMENT, variant_id TEXT NOT NULL REFERENCES variants(id),
+ employee_id TEXT REFERENCES employees(id), responsible_id TEXT REFERENCES responsibles(id), sector_id TEXT REFERENCES sectors(id), loan_date TEXT,
+ quantity INTEGER NOT NULL CHECK(quantity>0), held INTEGER NOT NULL DEFAULT 0 CHECK(held>=0), dirty INTEGER NOT NULL DEFAULT 0 CHECK(dirty>=0),
+ laundry INTEGER NOT NULL DEFAULT 0 CHECK(laundry>=0), clean INTEGER NOT NULL DEFAULT 0 CHECK(clean>=0), version INTEGER NOT NULL DEFAULT 1,
+ updated_at TEXT NOT NULL, sent_at TEXT,
+ CHECK(held+dirty+laundry+clean=quantity), CHECK(held=0 OR employee_id IS NOT NULL)
+) STRICT;
+CREATE INDEX opening_lots_variant ON opening_lots(variant_id);
+ALTER TABLE movements ADD COLUMN opening_lot_id INTEGER REFERENCES opening_lots(id);
 ` }];

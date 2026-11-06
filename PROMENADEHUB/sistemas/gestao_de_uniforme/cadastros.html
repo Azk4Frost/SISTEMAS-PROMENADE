@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Cadastros e saldo inicial dos uniformes do Promenade Country Club.">
+  <link rel="icon" href="../../assets/promenade-logo.png">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./novo-emprestimo.css">
+  <link rel="stylesheet" href="./cadastros.css">
+  <script type="module" src="./cadastros.js"></script>
+  <title>Promenade Hub | Cadastros de Uniformes</title>
+</head>
+<body class="catalog-page min-h-screen font-sans text-slate-800 antialiased">
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+  <header class="hub-header"><div class="hub-header-inner"><a class="hub-brand" href="../../index.html" aria-label="Promenade Hub, início"><img src="../../assets/promenade-logo.png" width="52" height="52" alt=""><span>PROMENADE HUB</span></a><a class="home-link" href="../../index.html" aria-label="Voltar ao início" title="Voltar ao início"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#exit"></use></svg></a></div></header>
+  <main id="conteudo" class="dashboard loan-workspace" tabindex="-1">
+    <nav class="loan-breadcrumb" aria-label="Você está em"><ol><li><a href="../../sistemas.html">Sistemas</a></li><li><a href="./index.html">Sistema de Uniformes</a></li><li aria-current="page">Cadastros</li></ol></nav>
+    <div class="catalog-heading"><div class="loan-heading"><h1>Cadastros de Uniformes</h1><p>Funcionários, responsáveis, setores e estoque por modelo, cor e tamanho.</p></div><a href="./index.html" class="button button-secondary">← Voltar ao painel</a></div>
+    <p id="catalog-notice" class="catalog-notice" role="status">Consultando cadastros…</p>
+    <button type="button" class="button button-secondary" id="reload-catalog" hidden>Tentar novamente</button>
+    <noscript><p class="catalog-notice is-error">Ative o JavaScript para consultar e salvar os cadastros no servidor local.</p></noscript>
+    <div class="catalog-tabs" role="tablist" aria-label="Tipos de cadastro">
+      <button id="tab-employees" role="tab" type="button" aria-selected="true" aria-controls="panel-employees">Funcionários</button>
+      <button id="tab-responsibles" role="tab" type="button" aria-selected="false" aria-controls="panel-responsibles" tabindex="-1">Responsáveis</button>
+      <button id="tab-sectors" role="tab" type="button" aria-selected="false" aria-controls="panel-sectors" tabindex="-1">Setores</button>
+      <button id="tab-stock" role="tab" type="button" aria-selected="false" aria-controls="panel-stock" tabindex="-1">Uniformes e estoque</button>
+    </div>
+
+    <section id="panel-employees" role="tabpanel" aria-labelledby="tab-employees" class="catalog-panel" tabindex="0">
+      <div class="catalog-grid grid gap-5">
+        <section class="loan-card"><div class="loan-section-heading"><h2>FUNCIONÁRIOS QUE RECEBEM UNIFORMES</h2><span id="employees-count" class="catalog-count">—</span></div><div class="catalog-table-scroll" role="region" aria-label="Funcionários cadastrados" tabindex="0"><table class="catalog-table"><thead><tr><th scope="col">Nome</th><th scope="col">Matrícula</th><th scope="col">Ações</th></tr></thead><tbody id="employees-list"></tbody></table></div></section>
+        <form class="loan-card catalog-form" id="form-employees" data-kind="employees"><div class="loan-section-heading"><h2 id="employees-form-title">NOVO FUNCIONÁRIO</h2></div><div class="catalog-form-body"><div class="field"><label for="employee-name">Nome completo</label><input id="employee-name" name="name" maxlength="200" required autocomplete="off"></div><div class="field"><label for="employee-registration">Matrícula</label><input id="employee-registration" name="registration" maxlength="128" required autocomplete="off"></div><p class="catalog-help">Quem recebe as peças. A matrícula identifica o funcionário, inclusive quando há nomes iguais.</p><div class="catalog-form-actions"><button class="button button-blue" type="submit">Salvar funcionário</button><button class="button button-secondary" type="reset">Limpar / cancelar edição</button></div></div></form>
+      </div>
+    </section>
+    <section id="panel-responsibles" role="tabpanel" aria-labelledby="tab-responsibles" class="catalog-panel" tabindex="0" hidden>
+      <div class="catalog-grid grid gap-5">
+        <section class="loan-card"><div class="loan-section-heading"><h2>RESPONSÁVEIS QUE ENTREGAM UNIFORMES</h2><span id="responsibles-count" class="catalog-count">—</span></div><div class="catalog-table-scroll" role="region" aria-label="Responsáveis cadastrados" tabindex="0"><table class="catalog-table"><thead><tr><th scope="col">Nome</th><th scope="col">Ações</th></tr></thead><tbody id="responsibles-list"></tbody></table></div></section>
+        <form class="loan-card catalog-form" id="form-responsibles" data-kind="responsibles"><div class="loan-section-heading"><h2 id="responsibles-form-title">NOVO RESPONSÁVEL</h2></div><div class="catalog-form-body"><div class="field"><label for="responsible-label">Nome completo</label><input id="responsible-label" name="label" maxlength="200" required autocomplete="off"></div><p class="catalog-help">Quem entrega as peças na portaria. O cadastro não cria login ou senha. Uma pessoa que também recebe uniformes pode constar nas duas listas.</p><div class="catalog-form-actions"><button class="button button-blue" type="submit">Salvar responsável</button><button class="button button-secondary" type="reset">Limpar / cancelar edição</button></div></div></form>
+      </div>
+    </section>
+    <section id="panel-sectors" role="tabpanel" aria-labelledby="tab-sectors" class="catalog-panel" tabindex="0" hidden>
+      <div class="catalog-grid grid gap-5">
+        <section class="loan-card"><div class="loan-section-heading"><h2>SETORES CADASTRADOS</h2><span id="sectors-count" class="catalog-count">—</span></div><div class="catalog-table-scroll" role="region" aria-label="Setores cadastrados" tabindex="0"><table class="catalog-table"><thead><tr><th scope="col">Setor</th><th scope="col">Ações</th></tr></thead><tbody id="sectors-list"></tbody></table></div></section>
+        <form class="loan-card catalog-form" id="form-sectors" data-kind="sectors"><div class="loan-section-heading"><h2 id="sectors-form-title">NOVO SETOR</h2></div><div class="catalog-form-body"><div class="field"><label for="sector-label">Nome do setor</label><input id="sector-label" name="label" maxlength="200" required autocomplete="off"></div><div class="catalog-form-actions"><button class="button button-blue" type="submit">Salvar setor</button><button class="button button-secondary" type="reset">Limpar / cancelar edição</button></div></div></form>
+      </div>
+    </section>
+    <section id="panel-stock" role="tabpanel" aria-labelledby="tab-stock" class="catalog-panel" tabindex="0" hidden>
+      <section class="loan-card catalog-stock-list"><div class="loan-section-heading"><h2>ESTOQUE ATUAL POR COR E TAMANHO</h2></div><div class="catalog-table-scroll" role="region" aria-label="Estoque cadastrado, com rolagem horizontal" tabindex="0"><table class="catalog-stock-table"><thead><tr><th scope="col">Modelo / Cor</th><th scope="col">Tamanho</th><th scope="col">Limpas</th><th scope="col">Com funcionários</th><th scope="col">Sujas</th><th scope="col">Lavanderia</th><th scope="col">Total</th><th scope="col">Ações</th></tr></thead><tbody id="stock-list"></tbody></table></div></section>
+      <form id="form-stock" class="loan-card catalog-form"><div class="loan-section-heading"><h2>NOVA VARIAÇÃO E SALDO INICIAL</h2></div><div class="catalog-form-body">
+        <p class="catalog-help">Registre a contagem real de uma nova combinação de modelo, cor e tamanho. O total inclui todas as situações. Saldos existentes não são substituídos.</p>
+        <div class="field"><label for="stock-model">Modelo</label><select id="stock-model" required><option value="">Selecione</option></select></div>
+        <div id="new-model-fields" class="catalog-new-model grid gap-3" hidden><div class="field"><label for="model-label">Nome do novo modelo</label><input id="model-label" maxlength="200" required disabled></div><div class="field"><label for="model-icon">Representação</label><select id="model-icon" required disabled><option value="">Selecione</option><option value="apron">Avental</option><option value="shirt-yellow">Camisa amarela</option><option value="shirt-white">Camisa branca</option><option value="pants">Calça</option></select></div><div class="field"><label for="model-card">Card do painel</label><select id="model-card" disabled><option value="">Sem card específico</option><option value="avental">Avental</option><option value="camisa-amarela">Camisa amarela</option><option value="camisa-branca">Camisa branca</option><option value="calca-azul">Calça azul</option></select></div></div>
+        <div class="catalog-variant-fields grid gap-3"><div class="field"><label for="stock-color">Cor</label><input id="stock-color" maxlength="200" required></div><div class="field"><label for="stock-size">Tamanho</label><input id="stock-size" maxlength="200" required></div></div>
+        <div class="catalog-balances grid gap-3"><div class="field"><label for="stock-clean">Limpas disponíveis</label><input id="stock-clean" type="number" min="0" step="1" value="0" required></div><div class="field"><label for="stock-dirty">Sujas na portaria</label><input id="stock-dirty" type="number" min="0" step="1" value="0" required></div><div class="field"><label for="stock-laundry">Na lavanderia</label><input id="stock-laundry" type="number" min="0" step="1" value="0" required></div><div class="field"><label for="stock-held">Com funcionários</label><input id="stock-held" value="0" readonly aria-describedby="holding-help"></div></div>
+        <div class="catalog-holdings-heading"><div><h3>Saldos iniciais com funcionários</h3><p id="holding-help" class="catalog-help">Informe quem recebeu as peças. Quem entregou e a data original podem ficar como não informados, se forem desconhecidos.</p></div><button id="add-holding" class="button button-secondary" type="button">+ Adicionar funcionário</button></div>
+        <div class="catalog-table-scroll" role="region" aria-label="Saldos com funcionários ainda não salvos" tabindex="0"><table class="catalog-holdings-table"><thead><tr><th scope="col">Quem recebeu / Quem entregou</th><th scope="col">Quantidade</th><th scope="col">Ações</th></tr></thead><tbody id="holding-list"></tbody></table></div>
+        <div class="catalog-total"><span>Quantidade total desta variação</span><output id="stock-total">0</output></div>
+        <p class="catalog-help">Sujas e peças já na lavanderia entram como saldo inicial sem empréstimo vinculado. Elas não são marcadas como limpas nem geram datas antigas fictícias.</p>
+        <div class="catalog-form-actions"><button class="button button-blue" type="submit">Cadastrar variação e saldo inicial</button><button class="button button-secondary" type="reset">Limpar preenchimento</button></div>
+      </div></form>
+    </section>
+    <footer class="dashboard-footer"><a href="./index.html">Promenade Country Club <span aria-hidden="true">/</span> Sistema de Uniformes</a><span>Cadastros</span></footer>
+  </main>
+  <dialog id="catalog-dialog" class="hub-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description"><div class="dialog-header"><span class="dialog-icon"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#clipboard"></use></svg></span><button type="button" class="dialog-close" aria-label="Fechar aviso"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#close"></use></svg></button></div><h2 id="dialog-title">Conferência</h2><p id="dialog-description"></p>
+    <div id="holding-fields" class="catalog-dialog-fields" hidden><div class="field"><label for="holding-employee">Quem recebeu</label><select id="holding-employee" required></select></div><div class="field"><label for="holding-responsible">Quem entregou (se conhecido)</label><select id="holding-responsible"></select></div><div class="field"><label for="holding-sector">Setor (se conhecido)</label><select id="holding-sector"></select></div><div class="field"><label for="holding-date">Data original (se conhecida)</label><input id="holding-date" type="date"></div><div class="field"><label for="holding-quantity">Quantidade com este funcionário</label><input id="holding-quantity" type="number" min="1" step="1" required></div></div>
+    <div id="replenish-fields" class="catalog-dialog-fields" hidden><div class="field"><label for="replenish-quantity">Novas peças limpas recebidas</label><input id="replenish-quantity" type="number" min="1" step="1" required></div></div>
+    <p class="dialog-detail"></p><div class="loan-dialog-actions"><button type="button" class="button button-secondary dialog-cancel" hidden>Cancelar</button><button type="button" class="button button-blue dialog-confirm">Confirmar</button></div>
+  </dialog>
+</body>
+</html>

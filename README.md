@@ -1,7 +1,7 @@
 # SISTEMAS-PROMENADE
 
-PROMENADE HUB — sistemas internos do clube. O módulo de **Uniformes** possui cinco
-páginas integradas a um backend local em **JavaScript/Node.js e SQLite**.
+PROMENADE HUB — sistemas internos do clube. O módulo de **Uniformes** possui as cinco
+páginas operacionais e uma tela de cadastros integradas a um backend local em **JavaScript/Node.js e SQLite**.
 Os demais módulos mantêm o código anterior.
 
 ## Instalação e execução
@@ -33,6 +33,20 @@ uso, cadastre os dados reais pelo procedimento abaixo. O CSS compilado é versio
 para apenas executar uma entrega já compilada, basta Node.js, sem Python ou serviços
 externos. Durante a edição de estilos, use `npm run watch:css`.
 
+### Uso no Windows 10 ou 11
+
+Instale o Node.js 24 ou superior pelo site oficial, extraia a pasta completa do
+projeto e abra **`Iniciar-Promenade.cmd`** na raiz. O arquivo verifica o Node e
+inicia o servidor; abra no navegador o endereço exibido e mantenha a janela aberta.
+Não é preciso instalar dependências para executar a entrega com CSS já compilado.
+Se a porta estiver ocupada, encerre a outra instância antes de iniciar novamente.
+
+Em atualizações, preserve `.data` e faça backup antes de trocar o código. Pare e
+reinicie o servidor para carregar a nova versão. A migração 2 adiciona cadastros
+versionados e saldos iniciais, preservando o estoque e os empréstimos anteriores.
+O iniciador foi revisado neste ambiente Linux; a execução nativa no Windows ainda
+precisa ser validada no computador da portaria.
+
 Variáveis opcionais do processo:
 
 | Variável | Uso |
@@ -45,8 +59,38 @@ lidas do processo; o servidor não carrega arquivos `.env` automaticamente.
 
 ## Cadastros e estoque inicial
 
-O cadastro administrativo é feito por arquivo JSON e comando local, sem criar
-novas páginas fora das referências aprovadas. Crie um modelo vazio:
+No painel de Uniformes, clique em **Cadastros**. A tela permite criar e editar
+funcionários (quem recebe), responsáveis (quem entrega) e setores. Uma pessoa pode
+ser cadastrada nas duas funções; isso não cria uma conta de acesso. Matrículas de
+funcionários são únicas. Edições não reescrevem saldos e não há exclusão de registros.
+
+Em **Uniformes e estoque**, selecione um modelo existente ou cadastre um novo,
+informe cor e tamanho e distribua a contagem inicial entre:
+
+- **Limpas disponíveis**: podem ser emprestadas imediatamente.
+- **Com funcionários**: adicione quem recebeu e a quantidade de cada pessoa.
+- **Sujas na portaria**: aguardam envio para a lavanderia.
+- **Na lavanderia**: aguardam recebimento limpo.
+
+O **total** é calculado pela soma das quatro situações. Para peças com funcionários,
+quem entregou, setor e data original são opcionais quando desconhecidos. Não são
+inventados nomes nem datas antigas. Sujas e peças já na lavanderia podem entrar
+sem vínculo com um funcionário. Revise a contagem e confirme antes da gravação.
+Uma combinação de modelo, cor e tamanho já existente não pode ser cadastrada de
+novo para substituir o saldo; use **Repor limpas** para entradas adicionais.
+
+Saldos anteriores aparecem como **Saldo inicial**, com código `INICIAL-`, e seguem
+as mesmas devoluções e operações parciais da lavanderia. Não recriam empréstimos
+históricos nem aumentam o indicador de empréstimos ativos: o painel informa
+separadamente a quantidade inicial ainda com funcionários. Cadastros e saldos são
+salvos no SQLite; campos ainda não confirmados não são gravados automaticamente.
+
+### Alternativa por arquivo JSON
+
+O comando local continua disponível para importar catálogos e saldo inicial
+**somente limpo**. Para uma contagem com peças em outras situações, use a tela.
+Crie um modelo vazio:
+
 
 ```sh
 npm run manage -- template .data/cadastros.json
@@ -74,9 +118,8 @@ usados nos empréstimos e filtros, mas não geram novos cards de desenho automat
 
 **`quantity` é a quantidade inicial de peças limpas disponíveis dessa variação.**
 Não inclua peças já com funcionários, sujas ou na lavanderia como se estivessem
-limpas disponíveis. Caso existam movimentações anteriores que precisem ser migradas,
-alinhe essa carga histórica antes de começar a operação; a importação inicial não
-inventa empréstimos antigos nem seus responsáveis.
+limpas disponíveis. Para cadastrar peças nessas situações, use a divisão de saldos na tela de
+Cadastros. A importação JSON não cria empréstimos históricos.
 
 Após preencher:
 
@@ -93,7 +136,10 @@ catálogo não é reposição e não deve substituir saldos operacionais.
 
 ### Reposição de peças limpas
 
-Use outro arquivo JSON com `operationId` novo, `variantId` existente e `quantity`
+Na tela de Cadastros, use **Repor limpas** na variação correspondente. Informe a
+quantidade adicional e confirme; total e disponibilidade aumentam juntos.
+
+Como alternativa pelo comando local, use outro arquivo JSON com `operationId` novo, `variantId` existente e `quantity`
 inteiro positivo. Execute:
 
 ```sh
@@ -102,7 +148,8 @@ npm run manage -- stock-add .data/reposicao.json
 
 O saldo total e o disponível aumentam juntos, com movimento de reposição registrado.
 Repetir o mesmo arquivo e identificador não adiciona as peças duas vezes.
-Esses comandos administrativos não são endpoints públicos do navegador.
+O navegador utiliza os endpoints locais de cadastro e reposição, com as mesmas
+validações de origem e idempotência das demais operações.
 
 ## Regras de Uniformes aprovadas
 
@@ -139,7 +186,8 @@ não presuma falha ou sucesso só por uma mensagem de conexão.
 - **Total** do card: total de peças cadastradas, incluindo as que estão fora da portaria.
 - **Disponível**: peças limpas que podem ser emprestadas agora.
 - **Em estoque**: peças limpas disponíveis mais as devolvidas sujas na portaria.
-- **Empréstimos ativos**: empréstimos com alguma quantidade ainda com funcionário.
+- **Empréstimos ativos**: empréstimos registrados no sistema com alguma quantidade
+  ainda com funcionário; saldos iniciais são informados separadamente.
 - **Devoluções (Hoje)**: quantidade de peças devolvidas sujas no dia de São Paulo.
 - **Na lavanderia**: quantidade ainda não recebida de volta.
 - **Estoque (Total Peças)**: soma das peças cadastradas, incluindo todos os modelos.
@@ -160,6 +208,7 @@ quantidades e horários, sem atribuir autenticação a um operador nesta versão
 | 03 — Enviar para a Lavanderia | `enviar-lavanderia.html` |
 | 04 — Receber da Lavanderia | `receber-lavanderia.html` |
 | 05 — Ver tudo | `todos-emprestimos.html` |
+| Cadastros | `cadastros.html` |
 
 No painel, registre devoluções pelo botão **Devolver sujo** e informe a quantidade.
 Os links rápidos de lavanderia levam à página correspondente com o item selecionado.
@@ -200,6 +249,12 @@ os saldos preservados. Não há comando destrutivo de reset ou de sobrescrita do
 | --- | --- |
 | GET | `/api/uniformes/dashboard` |
 | GET | `/api/uniformes/context` |
+| GET | `/api/uniformes/catalog` |
+| POST | `/api/uniformes/catalog/employees` |
+| POST | `/api/uniformes/catalog/responsibles` |
+| POST | `/api/uniformes/catalog/sectors` |
+| POST | `/api/uniformes/stock/open` |
+| POST | `/api/uniformes/stock/add` |
 | GET / POST | `/api/uniformes/drafts` |
 | GET | `/api/uniformes/drafts/:id` |
 | POST | `/api/uniformes/loans` |
@@ -237,10 +292,12 @@ Tailwind continua compilado, sem Play CDN, React ou outros frameworks.
 npm test
 ```
 
-**41 testes** validados no ambiente Linux com Node 24.19.0. Cobrem migrações,
+**50 testes** validados no ambiente Linux com Node 24.19.0. Cobrem migrações,
 persistência, restrição de arquivos, API, saldo insuficiente, ciclo parcial, lotes
 atômicos, versões desatualizadas, idempotência, duas conexões ao SQLite, rascunhos,
-cadastro, reposição, backup/restauração, filtros e cliente HTTP.
+cadastro, reposição, backup/restauração, filtros e cliente HTTP. A cobertura inclui
+migração do banco anterior, edição concorrente, matrícula duplicada, saldo inicial
+nas quatro situações, conservação de estoque e rejeição de corpo acima do limite.
 
 Também foi executado o fluxo pelas cinco telas no Chromium contra a API e SQLite
 reais de uma instância isolada: rascunho reaberto, perda de resposta após gravação,
@@ -251,57 +308,43 @@ verificados. Os dados eram exclusivamente de teste, em banco temporário; **não
 importados no banco operacional**. Windows, dados reais e a rotina da portaria ainda
 precisam de validação no computador de destino.
 
-Para aceitação com os dados reais, cadastre o estoque limpo inicial conferido e
+A tela de Cadastros também foi exercitada no Chromium: criação e edição de pessoas,
+setor, saldo inicial de 10 peças distribuídas entre as quatro situações, retorno e
+lavanderia até voltar a 10 limpas e reposição de mais 2. Foram conferidos navegação
+por teclado, confirmações, recarga e cinco larguras de tela entre 320 e 1440 pixels.
+Esses registros também ficaram exclusivamente em um banco temporário de teste.
+
+Para aceitação com os dados reais, cadastre a contagem inicial por situação e
 acompanhe um empréstimo, uma devolução e a lavanderia parciais, verificando o saldo
 em cada etapa. Confirme também abertura de rascunho depois de reiniciar o servidor
 e a cópia de backup. O sistema inicia vazio até esses cadastros serem fornecidos.
 
-## Arquivos desta integração
+## Arquivos da tela de Cadastros e preparação para Windows
 
 Caminhos relativos à raiz do repositório.
 
 Novos:
 
 ```text
-server/api.js
-server/application.js
-server/database.js
-server/index.js
-server/manage.js
-server/private-path.js
-server/schema.js
-server/uniformes.js
-tests/backend-foundation.test.js
-tests/fixtures/uniformes.js
-tests/uniformes-backend.test.js
-tests/uniformes-management.test.js
-tests/uniformes-service.test.js
+.gitattributes
+Iniciar-Promenade.cmd
+PROMENADEHUB/sistemas/gestao_de_uniforme/cadastros.html
+PROMENADEHUB/sistemas/gestao_de_uniforme/cadastros.css
+PROMENADEHUB/sistemas/gestao_de_uniforme/cadastros.js
+tests/uniformes-catalog.test.js
 ```
 
 Modificados:
 
 ```text
-.gitignore
-PROMENADEHUB/js/components/dialog.js
-PROMENADEHUB/js/components/laundry-selection.js
 PROMENADEHUB/js/modules/lavanderia-selecao-model.js
 PROMENADEHUB/js/services/uniformes-service.js
 PROMENADEHUB/sistemas/gestao_de_uniforme/app.js
-PROMENADEHUB/sistemas/gestao_de_uniforme/enviar-lavanderia.css
-PROMENADEHUB/sistemas/gestao_de_uniforme/enviar-lavanderia.html
 PROMENADEHUB/sistemas/gestao_de_uniforme/index.html
-PROMENADEHUB/sistemas/gestao_de_uniforme/input.css
-PROMENADEHUB/sistemas/gestao_de_uniforme/novo-emprestimo.html
-PROMENADEHUB/sistemas/gestao_de_uniforme/novo-emprestimo.js
-PROMENADEHUB/sistemas/gestao_de_uniforme/receber-lavanderia.html
-PROMENADEHUB/sistemas/gestao_de_uniforme/receber-lavanderia.js
-PROMENADEHUB/sistemas/gestao_de_uniforme/styles.css
 PROMENADEHUB/sistemas/gestao_de_uniforme/todos-emprestimos.html
+server/api.js
+server/index.js
+server/schema.js
+server/uniformes.js
 README.md
-package-lock.json
-package.json
-tests/lavanderia-envio.test.js
-tests/lavanderia-recebimento.test.js
-tests/novo-emprestimo.test.js
-tests/uniformes-filters.test.js
 ```

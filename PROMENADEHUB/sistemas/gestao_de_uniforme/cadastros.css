@@ -1,0 +1,62 @@
+.catalog-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+.catalog-notice { padding:12px 14px; margin-bottom:16px; color:#436898; background:#edf4ff; border:1px solid #d9e6fb; border-radius:6px; font-size:12px; line-height:1.6; }
+.catalog-notice.is-error { color:#a13d3d; background:#fff4f1; border-color:#f0d1cb; }
+.catalog-tabs { display:flex; gap:7px; flex-wrap:wrap; padding:7px; margin-bottom:20px; background:#eaf1fd; border:1px solid #d9e5f7; border-radius:7px; }
+.catalog-tabs button { padding:11px 16px; border-radius:5px; font-size:12px; font-weight:700; color:#5d7496; }
+.catalog-tabs button[aria-selected='true'] { background:#095bb5; color:white; box-shadow:0 2px 4px #1b4c8c12; }
+.catalog-tabs button:hover { background:#d8e7fc; color:#1258a8; }
+.catalog-tabs button[aria-selected='true']:hover { background:#064a96; color:white; }
+.catalog-grid { grid-template-columns:minmax(0,1.25fr) minmax(280px,1fr); align-items:start; }
+.catalog-count { color:#6c86a7; font-size:11px; }
+.catalog-form-body { padding:18px; display:flex; flex-direction:column; gap:16px; }
+.catalog-page .field { min-width:0; }
+.catalog-page .field input,.catalog-page .field select { min-width:0; width:100%; min-height:38px; font-size:13px; border-color:#cdddf3; }
+.catalog-page .field input[readonly] { background:#f2f6fc; color:#6c819e; }
+.catalog-form-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.catalog-help { font-size:11px; color:#7587a3; line-height:1.7; }
+.catalog-table-scroll { overflow-x:auto; overscroll-behavior-x:contain; }
+.catalog-table { min-width:440px; font-size:12px; }
+.catalog-table th { font-size:10px; }
+.catalog-table th:first-child { width:50%; }
+.catalog-table th:nth-child(2) { width:28%; }
+.catalog-table th:last-child { width:22%; text-align:center; }
+.catalog-table td { font-size:12px; }
+.catalog-table .button,.catalog-stock-table .button,.catalog-holdings-table .button { min-height:32px; padding:6px 9px; font-size:11px; }
+.catalog-empty { text-align:center; color:#8293ac; padding:30px 16px; font-size:12px; }
+.catalog-stock-list { margin-bottom:20px; }
+.catalog-stock-table { min-width:950px; }
+.catalog-stock-table th { padding-inline:10px; font-size:10px; }
+.catalog-stock-table th:first-child { width:24%; }
+.catalog-stock-table th:nth-child(2) { width:10%; }
+.catalog-stock-table th:nth-child(3),.catalog-stock-table th:nth-child(5),.catalog-stock-table th:nth-child(6),.catalog-stock-table th:nth-child(7) { width:9%; }
+.catalog-stock-table th:nth-child(4) { width:15%; }
+.catalog-stock-table th:last-child { width:15%; text-align:center; }
+.catalog-stock-table td { font-size:12px; }
+.catalog-variant-fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.catalog-new-model { grid-template-columns:2fr 1fr 1fr; padding:14px; background:#f5f8ff; border:1px solid #e0e9f9; border-radius:5px; }
+.catalog-balances { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.catalog-total { padding:16px; background:#edf5ff; border:1px solid #d5e5fb; border-radius:6px; display:flex; align-items:center; justify-content:space-between; gap:12px; color:#385b8c; font-size:13px; font-weight:700; }
+.catalog-total output { color:#105cae; font-size:28px; font-weight:800; }
+.catalog-holdings-heading { display:flex; align-items:flex-start; gap:20px; justify-content:space-between; }
+.catalog-holdings-heading h3 { color:#3e5f8d; font-size:13px; font-weight:700; margin-bottom:5px; }
+.catalog-holdings-heading .button { flex:none; }
+.catalog-holdings-table { min-width:560px; }
+.catalog-holdings-table th { font-size:10px; }
+.catalog-holdings-table th:first-child { width:56%; }
+.catalog-holdings-table th:nth-child(2) { width:14%; text-align:center; }
+.catalog-holdings-table th:last-child { width:30%; text-align:center; }
+.catalog-holdings-table td:nth-child(2) { text-align:center; }
+.catalog-holding-actions { display:flex; gap:6px; justify-content:center; }
+.catalog-dialog-fields { display:flex; flex-direction:column; gap:12px; margin-top:16px; }
+.catalog-form [type='submit']:disabled { opacity:.6; cursor:wait; }
+@media(max-width:900px) { .catalog-grid { grid-template-columns:minmax(0,1fr); } .catalog-new-model { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:600px) {
+ .catalog-heading { flex-direction:column; margin-bottom:18px; } .catalog-heading .loan-heading { margin-bottom:0; }
+ .catalog-tabs button { flex:1 1 auto; padding:11px 12px; }
+ .catalog-form-body { padding:14px; } .catalog-balances { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .catalog-variant-fields { grid-template-columns:minmax(0,1fr); }
+ .catalog-holdings-heading { flex-direction:column; gap:10px; }
+ .catalog-form-actions .button { flex:1 1 auto; min-height:42px; }
+ .catalog-page .field input,.catalog-page .field select { min-height:42px; }
+ .catalog-help { font-size:12px; }
+}

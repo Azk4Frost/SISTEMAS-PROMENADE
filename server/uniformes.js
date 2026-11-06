@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 export class DomainError extends Error {
   constructor(message, status = 400, code = 'VALIDATION_ERROR') { super(message); this.status = status; this.code = code; }
@@ -65,7 +65,7 @@ export function createUniformesStore(db) {
     if (!draft) fail('Rascunho não encontrado.',404,'NOT_FOUND');
     if (draft.version!==payload.draftVersion) fail('O rascunho foi alterado em outra janela. Reabra-o antes de continuar.',409,'STALE_DATA');
   }
-  const movement=(itemId,variantId,kind,quantity,at)=>run('INSERT INTO movements(item_id,variant_id,kind,quantity,happened_at) VALUES(?,?,?,?,?)',itemId,variantId,kind,quantity,at);
+  const movement=(itemId,variantId,kind,quantity,at,openingId=null)=>run('INSERT INTO movements(item_id,variant_id,kind,quantity,happened_at,opening_lot_id) VALUES(?,?,?,?,?,?)',itemId,variantId,kind,quantity,at,openingId);
   function importCatalog(payload,key) {
     return mutate('catalog-import',key,payload,()=>{
       for (const [field,table,label,name] of [['sectors','sectors','Setor','label'],['employees','employees','Funcionário','name'],['responsibles','responsibles','Responsável','label']]) {
@@ -73,8 +73,8 @@ export function createUniformesStore(db) {
         for (const entry of payload[field]) {
           if(!entry || typeof entry!=='object') fail('Cadastro inválido.');
           const id=text(entry.id,`ID de ${label}`,128), value=text(entry[name],label);
-          if (table==='employees') run('INSERT INTO employees(id,name,registration) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,registration=excluded.registration',id,value,text(entry.registration,'Matrícula',128));
-          else run(`INSERT INTO ${table}(id,label) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET label=excluded.label`,id,value);
+          if (table==='employees') run('INSERT INTO employees(id,name,registration) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,registration=excluded.registration,version=employees.version+1',id,value,text(entry.registration,'Matrícula',128));
+          else run(`INSERT INTO ${table}(id,label) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET label=excluded.label,version=${table}.version+1`,id,value);
         }
       }
       if (!Array.isArray(payload.uniforms)) fail('uniforms deve ser uma lista.');
@@ -83,7 +83,7 @@ export function createUniformesStore(db) {
         if(!uniform || typeof uniform!=='object') fail('Modelo inválido.');
         const id=text(uniform.id,'ID do modelo',128), label=text(uniform.label,'Modelo');
         if (!['apron','shirt-yellow','shirt-white','pants'].includes(uniform.icon)) fail('Ícone do uniforme inválido.');
-        run('INSERT INTO uniforms(id,label,icon) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET label=excluded.label,icon=excluded.icon',id,label,uniform.icon);
+        run('INSERT INTO uniforms(id,label,icon) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET label=excluded.label,icon=excluded.icon,version=uniforms.version+1',id,label,uniform.icon);
         if (!Array.isArray(uniform.variants)) fail('Informe as variações do uniforme.');
         for (const variant of uniform.variants) {
           if(!variant || typeof variant!=='object') fail('Variação inválida.');
@@ -143,28 +143,40 @@ export function createUniformesStore(db) {
       const seen=new Set(),at=now(); const [source,target] = {return:['held','dirty'],dispatch:['dirty','laundry'],receive:['laundry','clean']}[kind];
       for(const entry of payload.items) {
         if(!entry || typeof entry!=='object') fail('Item inválido.');
-        const id=Number(entry.id),quantity=qty(entry.quantity);
-        if(!Number.isSafeInteger(id) || id<=0 || seen.has(id)) fail('Item inválido ou duplicado.'); seen.add(id);
-        const line=get('SELECT * FROM loan_items WHERE id=?',id);
+        const rawId=String(entry.id),opening=/^initial-[1-9]\d*$/.test(rawId);
+        if(!opening&&!/^[1-9]\d*$/.test(rawId)) fail('Item inválido.');
+        const id=Number(opening?rawId.slice(8):rawId),quantity=qty(entry.quantity),table=opening?'opening_lots':'loan_items';
+        const identity=`${table}:${id}`;
+        if(!Number.isSafeInteger(id)||seen.has(identity)) fail('Item inválido ou duplicado.'); seen.add(identity);
+        const line=get(`SELECT * FROM ${table} WHERE id=?`,id);
         if(!line) fail('Item não encontrado.',404,'NOT_FOUND');
         if(entry.version!==line.version) fail('O item foi alterado em outra janela. Atualize a lista antes de continuar.',409,'STALE_DATA');
         if(line[source]<quantity) fail('A quantidade supera o saldo disponível nesta etapa do ciclo.',409,'INSUFFICIENT_BALANCE');
-        run(`UPDATE loan_items SET ${source}=${source}-?,${target}=${target}+?,version=version+1,updated_at=?${kind==='dispatch'?',sent_at=?':''} WHERE id=?`,...([quantity,quantity,at,...(kind==='dispatch'?[at]:[]),id]));
+        run(`UPDATE ${table} SET ${source}=${source}-?,${target}=${target}+?,version=version+1,updated_at=?${kind==='dispatch'?',sent_at=?':''} WHERE id=?`,...([quantity,quantity,at,...(kind==='dispatch'?[at]:[]),id]));
         if(kind==='receive') run('UPDATE variants SET available=available+? WHERE id=?',quantity,line.variant_id);
-        movement(id,line.variant_id,kind,quantity,at);
+        movement(opening?null:id,line.variant_id,kind,quantity,at,opening?id:null);
       }
       return {processed:payload.items.length};
     });
   }
-  const rows = () => all(`SELECT li.*,l.employee_id,l.sector_id,l.loan_date,l.notes,e.name,e.registration,s.label AS department,
-    v.uniform_id,v.color,v.size,u.label,u.icon FROM loan_items li JOIN loans l ON l.id=li.loan_id
-    JOIN employees e ON e.id=l.employee_id JOIN sectors s ON s.id=l.sector_id
-    JOIN variants v ON v.id=li.variant_id JOIN uniforms u ON u.id=v.uniform_id ORDER BY l.id DESC,li.id`);
+  const lineId=(line)=>line.origin==='opening'?`initial-${line.id}`:String(line.id);
+  const lineCode=(line)=>line.origin==='opening'?`INICIAL-${String(line.id).padStart(6,'0')}`:code(line.loan_id);
+  const rows = () => [
+    ...all(`SELECT li.*,l.employee_id,l.sector_id,l.responsible_id,l.loan_date,l.notes,e.name,e.registration,s.label AS department,r.label AS responsible_name,
+      v.uniform_id,v.color,v.size,u.label,u.icon,'loan' AS origin FROM loan_items li JOIN loans l ON l.id=li.loan_id
+      JOIN employees e ON e.id=l.employee_id JOIN sectors s ON s.id=l.sector_id JOIN responsibles r ON r.id=l.responsible_id
+      JOIN variants v ON v.id=li.variant_id JOIN uniforms u ON u.id=v.uniform_id ORDER BY l.id DESC,li.id`),
+    ...all(`SELECT o.*,NULL AS loan_id,COALESCE(e.name,'Saldo inicial') AS name,e.registration,
+      COALESCE(s.label,'Saldo inicial · setor não informado') AS department,r.label AS responsible_name,
+      v.uniform_id,v.color,v.size,u.label,u.icon,'opening' AS origin FROM opening_lots o
+      LEFT JOIN employees e ON e.id=o.employee_id LEFT JOIN sectors s ON s.id=o.sector_id LEFT JOIN responsibles r ON r.id=o.responsible_id
+      JOIN variants v ON v.id=o.variant_id JOIN uniforms u ON u.id=v.uniform_id ORDER BY o.id DESC`)
+  ];
   function dashboard() {
     const lines=rows(), loans=[];
     // Uma linha por parcela de estado: empréstimos parcialmente devolvidos podem aparecer em mais de um status.
     for(const line of lines) for(const [field,[status]] of Object.entries(statuses)) if(line[field]>0) loans.push({
-      id:`${line.id}-${field}`,lineId:String(line.id),code:code(line.loan_id),employee:{id:line.employee_id,name:line.name,registration:line.registration,department:line.department},
+      id:`${lineId(line)}-${field}`,lineId:lineId(line),code:lineCode(line),origin:line.origin,responsibleName:line.responsible_name??null,employee:{id:line.employee_id,name:line.name,registration:line.registration,department:line.department},
       items:[{uniform:line.uniform_id,label:`${line.label} · ${line.color}`,size:line.size,quantity:line[field]}],status,
       loanDate:line.loan_date,updatedAt:line.updated_at,returnableQuantity:field==='held'?line.held:0,version:line.version
     });
@@ -173,7 +185,7 @@ export function createUniformesStore(db) {
     }));
     const date=localDay(new Date());
     const returnsToday=all("SELECT quantity,happened_at FROM movements WHERE kind='return'").filter(row=>localDay(row.happened_at)===date).reduce((n,row)=>sum(n,row.quantity),0);
-    return {connection:'ready',inventory,loans,indicators:{activeLoans:new Set(lines.filter(line=>line.held>0).map(line=>line.loan_id)).size,returnsToday,atLaundry:lines.reduce((n,line)=>n+line.laundry,0),totalStock:inventory.reduce((n,item)=>n+item.total,0)}};
+    return {connection:'ready',inventory,loans,indicators:{activeLoans:new Set(lines.filter(line=>line.origin==='loan'&&line.held>0).map(line=>line.loan_id)).size,openingHeldPieces:lines.filter(line=>line.origin==='opening').reduce((n,line)=>sum(n,line.held),0),returnsToday,atLaundry:lines.reduce((n,line)=>n+line.laundry,0),totalStock:inventory.reduce((n,item)=>n+item.total,0)}};
   }
   function loanContext() {
     return {connection:'ready',employees:all('SELECT id,name,registration FROM employees ORDER BY name'),sectors:all('SELECT id,label FROM sectors ORDER BY label'),responsibles:all('SELECT id,label FROM responsibles ORDER BY label'),conditions:[{id:'limpo',label:'Limpo / Pronto para uso'}],
@@ -182,11 +194,79 @@ export function createUniformesStore(db) {
   function laundryContext(kind) {
     const field=kind==='dispatch'?'dirty':'laundry';
     return {connection:'ready',...(kind==='receive'?{afterReceiptStatus:{label:'Limpo / Disponível'}}:{}),items:rows().filter(line=>line[field]>0).map(line=>({
-      id:String(line.id),loanCode:code(line.loan_id),employee:{id:line.employee_id,name:line.name,department:line.department},uniform:{id:line.uniform_id,label:`${line.label} · ${line.color}`,size:line.size,icon:line.icon},loanDate:line.loan_date,sentDate:line.sent_at?localDay(line.sent_at):null,
+      id:lineId(line),loanCode:lineCode(line),origin:line.origin,employee:{id:line.employee_id,name:line.name,department:line.department},uniform:{id:line.uniform_id,label:`${line.label} · ${line.color}`,size:line.size,icon:line.icon},loanDate:line.loan_date,sentDate:line.sent_at?localDay(line.sent_at):null,
       status:{label:statuses[field][1],tone:statuses[field][2]},eligible:true,availableQuantity:line[field],version:line.version
     }))};
   }
+  function saveCatalogRecord(kind,payload,key) {
+    const config={employees:['employees','name'],sectors:['sectors','label'],responsibles:['responsibles','label']}[kind];
+    if(!config) fail('Tipo de cadastro inválido.');
+    return mutate(`catalog:${kind}`,key,payload,()=>{
+      const [table,field]=config,value=text(payload[field],field==='name'?'Nome':'Descrição');
+      const registration=kind==='employees'?text(payload.registration,'Matrícula',128):null;
+      const updating=payload.id!==undefined&&payload.id!==null;
+      if(kind==='employees') { const duplicate=get('SELECT id FROM employees WHERE registration=?',registration); if(duplicate&&duplicate.id!==payload.id) fail('Esta matrícula já está cadastrada para outro funcionário.',409,'DUPLICATE_REGISTRATION'); }
+      let id;
+      if(updating) {
+        id=reference(table,payload.id,'Cadastro');const current=get(`SELECT version FROM ${table} WHERE id=?`,id);
+        if(current.version!==payload.version) fail('Este cadastro foi alterado em outra janela. Atualize a página.',409,'STALE_DATA');
+        run(`UPDATE ${table} SET ${field}=?,version=version+1${kind==='employees'?',registration=?':''} WHERE id=?`,value,...(kind==='employees'?[registration]:[]),id);
+      } else {
+        id=`${kind}-${randomUUID()}`;
+        run(`INSERT INTO ${table}(id,${field}${kind==='employees'?',registration':''}) VALUES(?,?${kind==='employees'?',?':''})`,id,value,...(kind==='employees'?[registration]:[]));
+      }
+      return {id,version:get(`SELECT version FROM ${table} WHERE id=?`,id).version};
+    });
+  }
+  function openStock(payload,key) {
+    return mutate('stock-opening',key,payload,()=>{
+      const zeroQty=(value)=>value===0?0:qty(value);
+      const clean=zeroQty(payload.cleanQuantity),dirty=zeroQty(payload.dirtyQuantity),laundry=zeroQty(payload.laundryQuantity);
+      if(!Array.isArray(payload.holdings)||payload.holdings.length>500) fail('Informe os saldos com funcionários (até 500 linhas).');
+      const holdings=payload.holdings.map(entry=>{
+        if(!entry||typeof entry!=='object') fail('Saldo com funcionário inválido.');
+        return {quantity:qty(entry.quantity),employeeId:reference('employees',entry.employeeId,'Funcionário'),
+          responsibleId:entry.responsibleId?reference('responsibles',entry.responsibleId,'Responsável'):null,
+          sectorId:entry.sectorId?reference('sectors',entry.sectorId,'Setor'):null,
+          date:entry.date?civilDate(entry.date):null};
+      });
+      const total=holdings.reduce((n,entry)=>sum(n,entry.quantity),sum(sum(clean,dirty),laundry));
+      sum(get('SELECT COALESCE(SUM(total),0) AS total FROM variants').total,total);
+      let modelId;
+      if(payload.modelId) {
+        if(payload.newModel) fail('Escolha um modelo existente ou um novo, não ambos.');
+        modelId=reference('uniforms',payload.modelId,'Modelo');
+      } else {
+        const model=payload.newModel;
+        if(!model||typeof model!=='object') fail('Informe o modelo do uniforme.');
+        const label=text(model.label,'Nome do modelo');
+        if(!['apron','shirt-yellow','shirt-white','pants'].includes(model.icon)) fail('Escolha um ícone válido.');
+        if(model.cardId&&!['avental','camisa-amarela','camisa-branca','calca-azul'].includes(model.cardId)) fail('Card inválido.');
+        modelId=model.cardId||`model-${randomUUID()}`;
+        if(get('SELECT id FROM uniforms WHERE id=?',modelId)) fail('Este card já possui modelo cadastrado. Selecione o modelo existente.',409);
+        run('INSERT INTO uniforms(id,label,icon) VALUES(?,?,?)',modelId,label,model.icon);
+      }
+      const color=text(payload.color,'Cor'),size=text(payload.size,'Tamanho');
+      if(get('SELECT id FROM variants WHERE uniform_id=? AND color=? AND size=?',modelId,color,size)) fail('Esta cor e tamanho já estão cadastrados. Use Repor limpas para acrescentar peças, sem substituir os saldos.',409,'VARIANT_EXISTS');
+      const id=`variant-${randomUUID()}`,at=now();
+      run('INSERT INTO variants(id,uniform_id,color,size,total,available) VALUES(?,?,?,?,?,?)',id,modelId,color,size,total,clean);
+      const opening=(entry)=>run('INSERT INTO opening_lots(variant_id,employee_id,responsible_id,sector_id,loan_date,quantity,held,dirty,laundry,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)',
+        id,entry.employeeId??null,entry.responsibleId??null,entry.sectorId??null,entry.date??null,entry.quantity,entry.held??0,entry.dirty??0,entry.laundry??0,at);
+      if(dirty+laundry) opening({quantity:dirty+laundry,dirty,laundry});
+      for(const entry of holdings) opening({...entry,held:entry.quantity});
+      if(total) movement(null,id,'opening',total,at);
+      return {id,modelId,total,available:clean};
+    });
+  }
+  function catalog() {
+    const lines=rows();
+    return {employees:all('SELECT id,name,registration,version FROM employees ORDER BY name'),sectors:all('SELECT id,label,version FROM sectors ORDER BY label'),responsibles:all('SELECT id,label,version FROM responsibles ORDER BY label'),
+      uniforms:all('SELECT id,label,icon,version FROM uniforms ORDER BY label').map(model=>({...model,variants:all('SELECT id,color,size,total,available FROM variants WHERE uniform_id=? ORDER BY color,size',model.id).map(variant=>{
+        const matches=lines.filter(line=>line.variant_id===variant.id);
+        return {...variant,held:matches.reduce((n,line)=>sum(n,line.held),0),dirty:matches.reduce((n,line)=>sum(n,line.dirty),0),laundry:matches.reduce((n,line)=>sum(n,line.laundry),0)};
+      })}))};
+  }
   const listDrafts=()=>({drafts:all('SELECT id,payload,version,updated_at FROM drafts ORDER BY updated_at DESC').map(row=>({id:row.id,version:row.version,updatedAt:row.updated_at,employeeName:get('SELECT name FROM employees WHERE id=?',JSON.parse(row.payload).employeeId)?.name??'Funcionário não selecionado'}))});
   const readDraft=(id)=>{const row=get('SELECT * FROM drafts WHERE id=?',Number(id));if(!row)fail('Rascunho não encontrado.',404,'NOT_FOUND');return {id:row.id,version:row.version,...JSON.parse(row.payload)};};
-  return {dashboard,loanContext,laundryContext,registerLoan,saveDraft,listDrafts,readDraft,importCatalog,addStock,transition};
+  return {dashboard,loanContext,laundryContext,registerLoan,saveDraft,listDrafts,readDraft,importCatalog,addStock,transition,catalog,saveCatalogRecord,openStock};
 }
