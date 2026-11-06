@@ -1,317 +1,307 @@
 # SISTEMAS-PROMENADE
-Todas as minhas criações de sistemas da portaria e outros serviços pro clube promenade
 
-## Desenvolvimento — Uniformes (páginas 01 a 05)
+PROMENADE HUB — sistemas internos do clube. O módulo de **Uniformes** possui cinco
+páginas integradas a um backend local em **JavaScript/Node.js e SQLite**.
+Os demais módulos mantêm o código anterior.
 
-HTML5, CSS3, JavaScript em módulos ES6 e Tailwind CSS **compilado**, sem CDN.
-O painel está em `PROMENADEHUB/sistemas/gestao_de_uniforme/index.html` e o formulário em `PROMENADEHUB/sistemas/gestao_de_uniforme/novo-emprestimo.html`.
-As páginas anteriores e os outros módulos mantêm seus próprios estilos.
+## Instalação e execução
 
-### Instalação, compilação e execução
-
-Pré-requisitos: Node.js com npm (validados com Node 24.19.0 e npm 11.9.0) e Python 3 para servir arquivos por HTTP.
-Na raiz do repositório, execute:
+Requer **Node.js 24 ou superior**; versão validada: 24.19.0, com npm 11.9.0.
+Na raiz do repositório:
 
 ```sh
 npm ci
 npm run build:css
+npm test
 npm start
 ```
 
-Abra `http://127.0.0.1:8000/sistemas/gestao_de_uniforme/` no computador local,
-ou navegue pelo catálogo existente em `/sistemas.html` → **Gestão de Uniformes**.
-Módulos JavaScript precisam de HTTP: não use `file://`.
-Para recompilar o Tailwind durante edições, use `npm run watch:css` em outro terminal.
-O CSS compilado também é versionado: a página entregue pode ser servida sem Node/npm no computador da portaria.
-Após alterar HTML, JS ou `input.css`, recompile e inclua `styles.css` na entrega.
+O servidor atende somente o computador local, na porta **8000**, com frontend e
+API na mesma origem. Abra o endereço local no navegador e acesse **Sistemas →
+Gestão de Uniformes**. Não use `file://` ou o servidor estático Python para as
+operações: elas precisam do backend Node. Se houver outro servidor na porta,
+encerre-o ou escolha outra porta com a variável `PORT`.
 
-### Escopo e dados
+Nesta versão, conforme solicitado, **não há login**. O campo Responsável identifica
+o nome escolhido no empréstimo, mas não é autenticação. O modo é para um computador,
+sem acesso pela rede. O ícone superior direito retorna ao início.
 
-- Painel com quatro cards de uniformes, indicadores, tabela, pesquisa por nome/matrícula e filtros combináveis de status, uniforme e período do empréstimo.
-- **Novo Empréstimo**, **Enviar p/ Lavanderia** e **Receber da Lavanderia** abrem, respectivamente, as páginas 02, 03 e 04. Cada página tem seu próprio HTML.
-- Os traços **—** representam valores indisponíveis; não significam zero. A tabela não contém dados de demonstração.
-- Sem backend, autenticação, banco, `localStorage`, atualização em tempo real ou cálculos de estoque/ciclo nesta etapa. A página não afirma conexão com dados reais.
-- `PROMENADEHUB/js/services/uniformes-service.js` centraliza o acesso a dados e documenta o contrato de apresentação para integração futura. Endpoints, permissões e regras operacionais ainda precisam ser definidos com o responsável.
-- O ícone no canto superior direito retorna ao início; não realiza logout, pois não há autenticação.
-- O logotipo existente é reutilizado. Os ícones são SVG locais. Nenhuma fonte adicional foi fornecida para esta referência; é usada a fonte de sistema Arial, sem dependência externa. Os outros módulos mantêm suas fontes atuais.
+O banco é criado automaticamente em `.data/promenade.sqlite`, fora da pasta pública
+e ignorado pelo Git. Bancos e backups são recusados dentro da pasta pública,
+inclusive quando o caminho passa por links simbólicos. Não há funcionários, uniformes ou saldos fictícios. No primeiro
+uso, cadastre os dados reais pelo procedimento abaixo. O CSS compilado é versionado;
+para apenas executar uma entrega já compilada, basta Node.js, sem Python ou serviços
+externos. Durante a edição de estilos, use `npm run watch:css`.
 
-### Verificação
+Variáveis opcionais do processo:
+
+| Variável | Uso |
+| --- | --- |
+| `PORT` | Porta local, padrão 8000 |
+| `PROMENADE_DB_PATH` | Caminho do SQLite, padrão `.data/promenade.sqlite` na raiz do projeto |
+
+Não é necessário fornecer credenciais ou serviços externos. Essas variáveis são
+lidas do processo; o servidor não carrega arquivos `.env` automaticamente.
+
+## Cadastros e estoque inicial
+
+O cadastro administrativo é feito por arquivo JSON e comando local, sem criar
+novas páginas fora das referências aprovadas. Crie um modelo vazio:
+
+```sh
+npm run manage -- template .data/cadastros.json
+```
+
+O comando gera um `operationId` único e listas vazias. Ele não sobrescreve um arquivo
+existente. Preencha somente com dados reais; não coloque esse arquivo em `PROMENADEHUB`
+ou no Git. O conteúdo de `.data` permanece ignorado.
+
+Estrutura a preencher:
+
+| Lista | Campos de cada registro |
+| --- | --- |
+| `sectors` | `id`, `label` (nome do setor) |
+| `employees` | `id`, `name`, `registration` (matrícula única) |
+| `responsibles` | `id`, `label` (nome do responsável) |
+| `uniforms` | `id`, `label`, `icon`, `variants` |
+| `uniforms[].variants` | `id`, `color`, `size`, `quantity` |
+
+IDs são textos estáveis e únicos. Ícones aceitos: `apron`, `shirt-yellow`,
+`shirt-white`, `pants`. Os quatro cards aprovados utilizam os IDs `avental`,
+`camisa-amarela`, `camisa-branca` e `calca-azul`. Cores e tamanhos são cadastrados
+explicitamente; não são presumidos a partir da imagem. Outros modelos podem ser
+usados nos empréstimos e filtros, mas não geram novos cards de desenho automaticamente.
+
+**`quantity` é a quantidade inicial de peças limpas disponíveis dessa variação.**
+Não inclua peças já com funcionários, sujas ou na lavanderia como se estivessem
+limpas disponíveis. Caso existam movimentações anteriores que precisem ser migradas,
+alinhe essa carga histórica antes de começar a operação; a importação inicial não
+inventa empréstimos antigos nem seus responsáveis.
+
+Após preencher:
+
+```sh
+npm run manage -- import .data/cadastros.json
+```
+
+A operação é transacional: um erro impede a importação inteira. Repetir o mesmo
+arquivo com o mesmo `operationId` não duplica estoque. Alterar o arquivo mantendo
+esse identificador é recusado. Para uma nova importação, use um novo identificador.
+IDs já cadastrados podem atualizar nomes e matrículas, mas não a identidade de
+uma variação. Nessas variações existentes, informe `quantity: 0`: importação de
+catálogo não é reposição e não deve substituir saldos operacionais.
+
+### Reposição de peças limpas
+
+Use outro arquivo JSON com `operationId` novo, `variantId` existente e `quantity`
+inteiro positivo. Execute:
+
+```sh
+npm run manage -- stock-add .data/reposicao.json
+```
+
+O saldo total e o disponível aumentam juntos, com movimento de reposição registrado.
+Repetir o mesmo arquivo e identificador não adiciona as peças duas vezes.
+Esses comandos administrativos não são endpoints públicos do navegador.
+
+## Regras de Uniformes aprovadas
+
+O estoque é por **modelo, cor e tamanho**, não por etiqueta de peça individual:
+
+1. Peça limpa disponível → empréstimo: diminui o saldo limpo e fica com o funcionário.
+2. **Devolver sujo**: transfere a quantidade informada para peças sujas na portaria.
+   Ainda não aumenta o saldo limpo disponível.
+3. **Enviar p/ Lavanderia**: transfere somente a quantidade suja selecionada para a lavanderia.
+4. **Receber da Lavanderia**: transfere a quantidade selecionada para concluída/limpa
+   e aumenta o saldo disponível exatamente nessa quantidade.
+
+Devoluções, envios e recebimentos podem ser **parciais**. A quantidade precisa ser
+inteira, positiva e não ultrapassar o saldo da etapa. Não há limite por funcionário
+presumido; o limite aplicado é o estoque disponível. Peças limpas são a única condição
+permitida ao registrar empréstimo neste ciclo. Perdas, danos, devolução direta limpa,
+cancelamento de empréstimo confirmado e ajustes negativos não fazem parte das regras
+aprovadas e não foram criados silenciosamente.
+
+Rascunhos podem estar incompletos, ficam no SQLite e **não reservam estoque**. São
+reabertos em **Rascunhos salvos**, na página Novo Empréstimo. Depois de registrados,
+saem da lista de rascunhos e recebem um código `EMP-` sequencial. Se faltar estoque ou
+houver conflito entre janelas, o registro falha sem consumir o rascunho.
+
+O backend valida cadastros, saldos e versões dentro de transações. Lotes inválidos
+são revertidos por inteiro. Requisições repetidas com a mesma chave são idempotentes;
+o cliente reutiliza a chave quando perde a resposta da operação. Versões impedem que
+uma aba antiga processe novamente saldos já alterados por outra janela. Em caso de
+resultado não confirmado, consulte o painel e use a repetição da mesma operação;
+não presuma falha ou sucesso só por uma mensagem de conexão.
+
+### Indicadores e histórico
+
+- **Total** do card: total de peças cadastradas, incluindo as que estão fora da portaria.
+- **Disponível**: peças limpas que podem ser emprestadas agora.
+- **Em estoque**: peças limpas disponíveis mais as devolvidas sujas na portaria.
+- **Empréstimos ativos**: empréstimos com alguma quantidade ainda com funcionário.
+- **Devoluções (Hoje)**: quantidade de peças devolvidas sujas no dia de São Paulo.
+- **Na lavanderia**: quantidade ainda não recebida de volta.
+- **Estoque (Total Peças)**: soma das peças cadastradas, incluindo todos os modelos.
+
+A tabela representa parcelas do ciclo: uma linha de empréstimo parcialmente
+processada pode aparecer com saldos em mais de um status. As linhas limpas concluídas
+ficam no histórico; não são uma segunda contagem do estoque disponível e não geram
+novas peças. A data de envio da tabela é a do último envio daquele item; o histórico
+de movimentos preserva os timestamps de todas as parcelas. Os registros guardam
+quantidades e horários, sem atribuir autenticação a um operador nesta versão sem login.
+
+## Páginas e operação
+
+| Página | Caminho em `PROMENADEHUB/sistemas/gestao_de_uniforme/` |
+| --- | --- |
+| 01 — Painel | `index.html` |
+| 02 — Novo Empréstimo | `novo-emprestimo.html` |
+| 03 — Enviar para a Lavanderia | `enviar-lavanderia.html` |
+| 04 — Receber da Lavanderia | `receber-lavanderia.html` |
+| 05 — Ver tudo | `todos-emprestimos.html` |
+
+No painel, registre devoluções pelo botão **Devolver sujo** e informe a quantidade.
+Os links rápidos de lavanderia levam à página correspondente com o item selecionado.
+Nessas páginas, marque os itens e ajuste a quantidade de cada um antes de confirmar.
+As mensagens de sucesso só aparecem após confirmação da gravação pelo servidor.
+Após registrar, os saldos e a lista são consultados novamente.
+
+O painel mostra até seis resultados; **Ver tudo** abre um HTML independente com todos
+os resultados carregados. Pesquisa e filtros são aplicados antes desse limite e
+acompanham ida/volta pela URL. Não há dados operacionais em `localStorage` ou
+`sessionStorage`. Tabelas extensas têm rolagem horizontal própria.
+
+## Backup e restauração
+
+O GitHub armazena o código; **não é backup do SQLite**. Para gerar uma cópia consistente,
+mesmo com o servidor em funcionamento, escolha um nome novo fora da pasta pública:
+
+```sh
+npm run manage -- backup .data/backups/copia-001.sqlite
+```
+
+O comando não sobrescreve destinos existentes. Copie também backups para outro
+local/dispositivo para não depender do mesmo disco. Não faça backup copiando apenas
+o arquivo de um banco aberto: SQLite pode ter alterações nos arquivos WAL/SHM.
+
+Para restaurar, pare o servidor e preserve primeiro a pasta de dados atual. Use uma
+cópia validada do backup em outro caminho e configure `PROMENADE_DB_PATH` para essa
+cópia, mantendo os arquivos anteriores intactos. O servidor verifica o histórico de
+migrações ao abrir. Não misture arquivos WAL/SHM antigos com o backup restaurado.
+O teste automatizado de gestão faz backup, reabre a cópia e verifica a integridade e
+os saldos preservados. Não há comando destrutivo de reset ou de sobrescrita do banco.
+
+## API e organização
+
+`GET /api/health` verifica o servidor e o SQLite. Operações principais:
+
+| Método | Caminho |
+| --- | --- |
+| GET | `/api/uniformes/dashboard` |
+| GET | `/api/uniformes/context` |
+| GET / POST | `/api/uniformes/drafts` |
+| GET | `/api/uniformes/drafts/:id` |
+| POST | `/api/uniformes/loans` |
+| POST | `/api/uniformes/returns` |
+| GET / POST | `/api/uniformes/laundry/dispatch` |
+| GET / POST | `/api/uniformes/laundry/receive` |
+
+As escritas aceitam JSON com `X-Promenade-Request: 1` e `Idempotency-Key`; Host e
+Origin são verificados para o servidor local. O corpo tem limite técnico de 128 KiB;
+um lote tem até 500 linhas. Transições recebem `items: [{id, quantity, version}]`.
+Esses contratos são consumidos por `PROMENADEHUB/js/services/uniformes-service.js`.
+
+Código do servidor:
+
+```text
+server/index.js        # inicialização local
+server/application.js  # HTTP, arquivos estáticos e erros
+server/api.js          # rotas e validação de requisições
+server/database.js     # abertura SQLite e migrações transacionais
+server/schema.js       # esquema operacional versionado
+server/uniformes.js    # regras, consultas, transações e idempotência
+server/manage.js       # cadastro inicial, reposição e backup
+server/private-path.js # proteção dos caminhos privados
+```
+
+Foram atualizados o serviço de dados, o controlador compartilhado de lavanderia,
+o modelo de seleção e os módulos das páginas 01/02/04. Adaptações necessárias nas
+telas: devolução por quantidade, quantidades parciais na lavanderia, lista de
+rascunhos e mensagens reais de gravação. HTML, CSS e JavaScript permanecem separados;
+Tailwind continua compilado, sem Play CDN, React ou outros frameworks.
+
+## Testes e validação
 
 ```sh
 npm test
 ```
 
-Os testes usam apenas o runner nativo do Node; as fixtures são exclusivas de teste e não entram na aplicação.
-Cobrem pesquisa por nome/matrícula, acentos, combinação de filtros, datas inclusivas,
-período inválido, resultados vazios e serviço sem backend.
+**41 testes** validados no ambiente Linux com Node 24.19.0. Cobrem migrações,
+persistência, restrição de arquivos, API, saldo insuficiente, ciclo parcial, lotes
+atômicos, versões desatualizadas, idempotência, duas conexões ao SQLite, rascunhos,
+cadastro, reposição, backup/restauração, filtros e cliente HTTP.
 
-Para aceitação da página:
+Também foi executado o fluxo pelas cinco telas no Chromium contra a API e SQLite
+reais de uma instância isolada: rascunho reaberto, perda de resposta após gravação,
+retry sem duplicar empréstimo, devolução de 2/5 peças, envio de 1/2, recebimento de 1
+e conclusão das parcelas restantes. O saldo voltou às 10 peças iniciais, sem criar
+ou perder estoque. Quantidades inválidas, conteúdo externo e responsividade foram
+verificados. Os dados eram exclusivamente de teste, em banco temporário; **não foram
+importados no banco operacional**. Windows, dados reais e a rotina da portaria ainda
+precisam de validação no computador de destino.
 
-1. Confirme aparência, nomes e proporções com a referência 01. Contadores devem mostrar **—** e a tabela deve informar a integração pendente.
-2. Abra **Ver Filtros**, combine campos, informe uma data final anterior à inicial e confira a validação. **Limpar filtros** deve limpar também pesquisa e status.
-3. Abra **Receber da Lavanderia** e confira o retorno ao painel. Nos diálogos das páginas 02 a 04, teste Tab, Shift+Tab, Escape e retorno do foco ao elemento de origem.
-4. Confira o acesso pelo catálogo, a navegação para **Novo Empréstimo** e o retorno ao início. As páginas de envio e recebimento estão ligadas ao painel.
-5. Confira desktop, tablet e celular. Com registros, a tabela deve permitir rolagem horizontal própria, sem expandir a página.
+Para aceitação com os dados reais, cadastre o estoque limpo inicial conferido e
+acompanhe um empréstimo, uma devolução e a lavanderia parciais, verificando o saldo
+em cada etapa. Confirme também abertura de rascunho depois de reiniciar o servidor
+e a cópia de backup. O sistema inicia vazio até esses cadastros serem fornecidos.
 
-Operações reais, persistência e indicadores só poderão ser validados após a integração com o backend.
+## Arquivos desta integração
 
-### Página 02 — Novo Empréstimo
+Caminhos relativos à raiz do repositório.
 
-No painel, clique em **Novo Empréstimo**, ou abra o caminho
-`/sistemas/gestao_de_uniforme/novo-emprestimo.html` no servidor local.
-A mesma compilação (`npm run build:css`) atende às duas páginas. Os estilos personalizados
-da página 02 estão isolados em `novo-emprestimo.css`, sem alterar a aparência do painel aprovado.
-
-O formulário reúne data, funcionário, setor, responsável, tipo/cor/tamanho da peça,
-quantidade, condição e observação. A data inicial usa o fuso `America/Sao_Paulo`;
-não há restrições de negócio sobre datas. Cadastros, variações, condições e saldos
-devem vir do serviço; não são preenchidos com nomes ou estoque fictícios.
-O serviço documenta o contrato para a integração futura.
-
-Com cadastros disponíveis, é possível adicionar, editar e remover itens **somente do
-formulário ainda não registrado**. O resumo conta as linhas e quantidades digitadas,
-sem reservar peças, descontar estoque, definir limites por funcionário, mesclar itens
-ou alterar o ciclo. Cores e tamanhos são filtrados pelas variações cadastradas.
-Remover um item e sair com alterações exigem confirmação. Escape cancela a confirmação.
-
-**Não há persistência nesta etapa.** A página não usa `localStorage`, `sessionStorage`
-ou banco temporário. Fechar/recarregar a página descarta o preenchimento após o aviso
-de saída do navegador. **Salvar rascunho** e **Registrar Empréstimo** recusam a operação
-com uma mensagem explícita de integração pendente; nunca informam sucesso. Preenchimento
-e itens permanecem intactos ao fechar esse aviso. As regras de autorização, disponibilidade,
-rascunhos, códigos e registro efetivo precisam ser alinhadas antes da integração.
-
-Validação manual da página 02:
-
-1. Confirme formulário e coluna de resumo com a referência 02, nos tamanhos desktop e celular.
-2. Sem backend, confirme seletores indisponíveis, tabela vazia e ausência de saldos presumidos.
-3. Teste os avisos de **Adicionar Item**, **Salvar rascunho** e **Registrar Empréstimo**.
-4. Digite uma observação, tente cancelar e escolha **Continuar editando**. O texto deve permanecer.
-5. Confirme o descarte para retornar ao painel. O link **Novo Empréstimo** deve abrir o formulário novamente.
-
-`npm test` inclui testes do modelo da página 02 e regressão dos filtros da página 01.
-As validações de itens com cadastros são exercitadas com fixtures exclusivas de teste,
-sem torná-las disponíveis na aplicação. O registro de um empréstimo real permanece não testável
-até a integração com o backend.
-
-Arquivos adicionados na página 02:
+Novos:
 
 ```text
-PROMENADEHUB/sistemas/gestao_de_uniforme/novo-emprestimo.html
-PROMENADEHUB/sistemas/gestao_de_uniforme/novo-emprestimo.css
-PROMENADEHUB/sistemas/gestao_de_uniforme/novo-emprestimo.js
-PROMENADEHUB/js/modules/novo-emprestimo-model.js
-tests/novo-emprestimo.test.js
+server/api.js
+server/application.js
+server/database.js
+server/index.js
+server/manage.js
+server/private-path.js
+server/schema.js
+server/uniformes.js
+tests/backend-foundation.test.js
+tests/fixtures/uniformes.js
+tests/uniformes-backend.test.js
+tests/uniformes-management.test.js
+tests/uniformes-service.test.js
 ```
 
-Arquivos atualizados nesta etapa: `README.md`, `tailwind.config.cjs`,
-`PROMENADEHUB/assets/icons/ui.svg`, `PROMENADEHUB/js/components/dialog.js`,
-`PROMENADEHUB/js/services/uniformes-service.js`,
-`PROMENADEHUB/sistemas/gestao_de_uniforme/index.html` (link para a nova página),
-`PROMENADEHUB/sistemas/gestao_de_uniforme/app.js` (texto dos destinos pendentes) e
-`PROMENADEHUB/sistemas/gestao_de_uniforme/styles.css` (recompilação).
-
-
-### Página 03 — Enviar para a Lavanderia
-
-No painel, clique em **Enviar p/ Lavanderia**. O caminho no servidor local é
-`/sistemas/gestao_de_uniforme/enviar-lavanderia.html`. A instalação e a execução
-continuam iguais: `npm ci`, `npm run build:css` e `npm start`, na raiz.
-A página reutiliza os componentes visuais existentes e o diálogo acessível;
-seus ajustes próprios estão em `enviar-lavanderia.css`.
-
-A tabela permite seleção individual e de todos os itens **elegíveis**. O checkbox
-principal indica seleção parcial. O resumo conta as linhas selecionadas e os tipos
-e funcionários distintos por ID. Esses valores representam somente a seleção,
-não saldos operacionais. Cor, tamanho ou status não determinam elegibilidade:
-ela deve ser explicitamente fornecida pelo backend para cada item. Peças não
-elegíveis permanecem visíveis e não selecionáveis, com explicação em texto.
-
-Não há registros fictícios na página. Sem backend, há estado vazio com integração
-pendente e a confirmação fica desabilitada. Com dados disponíveis, a seleção
-habilita **Confirmar Envio**, mas o serviço atual recusa a gravação com aviso
-explícito de integração pendente. Nenhum estoque ou status é alterado, e a seleção
-é preservada. Não há persistência, armazenamento no navegador ou atualização em
-tempo real. Permissões, elegibilidade atual e a operação efetiva deverão ser
-revalidadas pelo servidor na etapa de integração; nenhuma regra de transição do
-ciclo foi criada. Sair com itens selecionados exige confirmação de descarte.
-
-Verificação manual:
-
-1. Confira a aparência com a referência 03 e o link do painel para a nova página.
-2. Sem backend, confira a mensagem de integração pendente, tabela vazia, resumo
-   zerado e confirmação desabilitada. Cancelar deve retornar ao painel.
-3. Com dados reais integrados futuramente, confira seleção individual/todos,
-   estado parcial, linhas inelegíveis, resumo e rolagem horizontal no celular.
-4. Teste os diálogos com Tab, Shift+Tab e Escape, e a confirmação de descarte.
-5. Confirme que as páginas 01 e 02 continuam acessíveis.
-
-`npm test` inclui a validação do contexto, elegibilidade explícita, resumo e
-payload da seleção, além da recusa de envio sem backend. A validação no Chromium
-usou fixtures exclusivas de teste para exercitar seleção, itens inelegíveis,
-conteúdo externo seguro e erro de consulta com nova tentativa. Envio real,
-movimentação de estoque e persistência continuam não testáveis sem backend.
-
-Arquivos criados nesta etapa:
+Modificados:
 
 ```text
-PROMENADEHUB/sistemas/gestao_de_uniforme/enviar-lavanderia.html
-PROMENADEHUB/sistemas/gestao_de_uniforme/enviar-lavanderia.css
-PROMENADEHUB/sistemas/gestao_de_uniforme/enviar-lavanderia.js
-PROMENADEHUB/js/modules/lavanderia-envio-model.js
-tests/lavanderia-envio.test.js
-```
-
-Arquivos modificados: `README.md`,
-`PROMENADEHUB/js/services/uniformes-service.js` (novos pontos de integração),
-`PROMENADEHUB/sistemas/gestao_de_uniforme/index.html` (link para a página 03),
-`PROMENADEHUB/sistemas/gestao_de_uniforme/app.js` (texto do único destino pendente) e
-`PROMENADEHUB/sistemas/gestao_de_uniforme/styles.css` (recompilação do Tailwind).
-
-
-### Página 04 — Receber da Lavanderia
-
-No painel, clique em **Receber da Lavanderia**, ou abra o caminho
-`/sistemas/gestao_de_uniforme/receber-lavanderia.html` pelo servidor HTTP local.
-Os comandos permanecem `npm ci`, `npm run build:css` e `npm start`, na raiz.
-
-A página segue a referência 04: acentos verdes, itens em retorno, data de envio,
-status atual, resumo do recebimento e bloco de conferência. A lógica de seleção,
-resumo, carregamento e diálogos é compartilhada com o envio, mantendo arquivos
-HTML independentes. O painel agora possui links para as três páginas de operação;
-os avisos antigos de página pendente foram removidos.
-
-A consulta usa `loadLaundryReceiptItems`; a gravação futura fica centralizada em
-`receiveUniformesFromLaundry`. O contrato de cada item inclui `sentDate` e a
-**elegibilidade explícita para recebimento**, que deve vir do backend. Ela não é
-inferida do status, da existência de um envio ou da seleção feita na página 03.
-O servidor deverá validar novamente permissões e elegibilidade ao receber.
-
-O resumo mostra itens selecionados e itens selecionados em retorno. O rótulo
-**Após o recebimento** só apresenta o valor informado pelo backend no campo
-`afterReceiptStatus.label`. Sem essa informação, mostra **Não informado**;
-a tela não determina uma regra de limpeza ou transição de status.
-
-**Sem backend, não há recebimento efetivo.** A página exibe integração pendente,
-tabela vazia e botão desabilitado. Com itens disponíveis, selecionar habilita a
-confirmação, mas o serviço atual recusa a gravação com mensagem explícita, sem
-sucesso simulado. A seleção e os status apresentados são preservados. Nenhum saldo
-é incrementado, nenhuma peça é marcada como limpa e nenhum registro é persistido.
-Não há sincronização via `localStorage` ou armazenamento temporário entre páginas.
-Sair com seleção exige confirmação de descarte.
-
-Verificação manual:
-
-1. Confirme visual, navegação e estado vazio com a referência 04.
-2. Com dados reais integrados futuramente, selecione um item e depois todos;
-   confira resumo, estado parcial e bloqueio das linhas inelegíveis.
-3. Confira **Enviado em** e o status posterior fornecido pelo backend, sem presumir
-   valores quando essas informações estiverem ausentes.
-4. Confira o aviso de integração pendente ao confirmar, preservação da seleção,
-   descarte ao cancelar, foco, Escape e rolagem horizontal no celular.
-5. Confira a navegação das páginas 01 a 03, especialmente o envio após a extração
-   do controlador comum de seleção.
-
-Validação executada nesta etapa: compilação do Tailwind; 23 testes unitários;
-Chromium nas páginas 03/04 com seleção individual/todos, seleção parcial, linhas
-inelegíveis, resumo, conteúdo externo seguro, recusa de gravação, descarte,
-falha de consulta com nova tentativa, sete larguras entre 320 e 1600 px e navegação
-das páginas anteriores. Os dados usados nesses cenários são fixtures exclusivas
-de teste, não registros adicionados à aplicação. Recebimento real e persistência
-não foram testados porque ainda dependem do backend e das regras operacionais.
-
-Arquivos criados na etapa 04:
-
-```text
-PROMENADEHUB/sistemas/gestao_de_uniforme/receber-lavanderia.html
-PROMENADEHUB/sistemas/gestao_de_uniforme/receber-lavanderia.css
-PROMENADEHUB/sistemas/gestao_de_uniforme/receber-lavanderia.js
+.gitignore
+PROMENADEHUB/js/components/dialog.js
 PROMENADEHUB/js/components/laundry-selection.js
 PROMENADEHUB/js/modules/lavanderia-selecao-model.js
-tests/lavanderia-recebimento.test.js
-```
-
-Arquivos modificados nesta etapa:
-
-```text
-README.md
 PROMENADEHUB/js/services/uniformes-service.js
-PROMENADEHUB/js/modules/lavanderia-envio-model.js
-PROMENADEHUB/sistemas/gestao_de_uniforme/enviar-lavanderia.js
-PROMENADEHUB/sistemas/gestao_de_uniforme/index.html
 PROMENADEHUB/sistemas/gestao_de_uniforme/app.js
-PROMENADEHUB/sistemas/gestao_de_uniforme/styles.css
-```
-
-
-### Página 05 — Ver tudo
-
-Na página 01, o botão azul **Ver tudo**, à direita dos controles da tabela, abre
-`/sistemas/gestao_de_uniforme/todos-emprestimos.html`. Esse HTML independente
-reproduz a composição do painel da referência 05: cabeçalho, quatro cards,
-indicadores, pesquisa, filtros e listagem extensa. O botão **Voltar**, na mesma
-posição, retorna à prévia da página 01.
-
-A página 01 mostra uma prévia de até **seis registros**, na ordem recebida do
-serviço. A página 05 mostra todos os resultados carregados, sem esse limite.
-Pesquisa e filtros são aplicados **antes** do limite da prévia: registros após
-a sexta posição também podem ser encontrados. O rodapé distingue resultados
-exibidos, resultados dos filtros e total de registros carregados. Indicadores e
-saldos continuam vindos do serviço, sem serem recalculados a partir dessa prévia.
-
-Ao navegar entre **Ver tudo** e **Voltar**, pesquisa, status, tipo de uniforme e
-período são preservados por parâmetros da URL (`q`, `status`, `uniform`, `start`,
-`end`). O painel de filtros abre quando há filtros adicionais recebidos na URL.
-Não há `localStorage`, dados fictícios ou persistência operacional. **Ver Filtros**
-continua disponível nas duas páginas.
-
-As páginas compartilham `app.js` e o CSS compilado; cada uma mantém seu próprio
-HTML. O atributo `data-loan-view` distingue a prévia da listagem completa.
-As operações rápidas de empréstimo/estoque permanecem pendentes das regras e do
-backend. **Ver tudo** se refere aos registros carregados pelo contrato atual de
-`loadUniformesDashboard`; não é uma garantia sobre registros remotos não consultados.
-Se a integração futura paginar a API, o serviço deverá obter o conjunto completo
-ou implementar a navegação real do backend, sem apresentar uma página parcial como
-se fosse a listagem completa.
-
-Execução e verificação:
-
-```sh
-npm ci
-npm run build:css
-npm test
-npm start
-```
-
-1. Abra a página 01 e clique em **Ver tudo**. Sem backend, confira a mensagem de
-   integração pendente e os contadores indisponíveis, sem registros inventados.
-2. Clique em **Voltar** e confira a navegação. A pesquisa e os filtros preenchidos
-   devem acompanhar a ida e a volta; **Limpar filtros** limpa todos os campos.
-3. Na integração futura com dados reais, confira até seis resultados na prévia e
-   todos os resultados carregados na página 05. A pesquisa deve encontrar registros
-   que estavam além da sexta posição.
-4. Confira desktop e celular: a tabela preenchida tem rolagem horizontal própria
-   e o botão permanece acessível.
-
-Verificações executadas: Tailwind compilado, 23 testes existentes aprovados e
-Chromium nas páginas 01/05 em sete larguras entre 320 e 1600 px. Os cenários com
-13 registros, busca após a sexta posição, filtros combinados, preservação de
-parâmetros, datas inválidas, ausência de resultados, falha de consulta com nova
-tentativa e navegação às páginas 02/03/04 usaram apenas fixtures exclusivas de
-teste. Não foram adicionadas à aplicação.
-
-Arquivo criado:
-
-```text
-PROMENADEHUB/sistemas/gestao_de_uniforme/todos-emprestimos.html
-```
-
-Arquivos modificados nesta etapa:
-
-```text
-README.md
+PROMENADEHUB/sistemas/gestao_de_uniforme/enviar-lavanderia.css
+PROMENADEHUB/sistemas/gestao_de_uniforme/enviar-lavanderia.html
 PROMENADEHUB/sistemas/gestao_de_uniforme/index.html
-PROMENADEHUB/sistemas/gestao_de_uniforme/app.js
 PROMENADEHUB/sistemas/gestao_de_uniforme/input.css
+PROMENADEHUB/sistemas/gestao_de_uniforme/novo-emprestimo.html
+PROMENADEHUB/sistemas/gestao_de_uniforme/novo-emprestimo.js
+PROMENADEHUB/sistemas/gestao_de_uniforme/receber-lavanderia.html
+PROMENADEHUB/sistemas/gestao_de_uniforme/receber-lavanderia.js
 PROMENADEHUB/sistemas/gestao_de_uniforme/styles.css
+PROMENADEHUB/sistemas/gestao_de_uniforme/todos-emprestimos.html
+README.md
+package-lock.json
+package.json
+tests/lavanderia-envio.test.js
+tests/lavanderia-recebimento.test.js
+tests/novo-emprestimo.test.js
+tests/uniformes-filters.test.js
 ```

@@ -50,7 +50,7 @@
       </article>
       <article class="inventory-card" data-uniform="camisa-amarela">
         <div class="garment-icon"><svg aria-hidden="true" viewBox="0 0 40 48"><use href="../../assets/icons/ui.svg#shirt-yellow"></use></svg></div>
-        <div class="garment-description"><h2>CAMISA AMARELA</h2><p>Tamanho: <span>Único</span></p><p>Disponível: <strong data-available>—</strong></p></div>
+        <div class="garment-description"><h2>CAMISA AMARELA</h2><p>Total: <span data-garment-total>—</span></p><p>Disponível: <strong data-available>—</strong></p></div>
         <div class="stock-total"><span>Em estoque</span><strong data-total>—</strong></div>
       </article>
       <article class="inventory-card" data-uniform="camisa-branca">
@@ -121,5 +121,11 @@
     <footer class="dashboard-footer"><a href="../../sistemas.html">Promenade Country Club <span aria-hidden="true">/</span> Sistemas</a><span>Gestão de Uniformes · Listagem completa</span></footer>
   </main>
 
+  <dialog id="return-dialog" class="hub-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description">
+    <div class="dialog-header"><span class="dialog-icon"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#return"></use></svg></span><button type="button" class="dialog-close" aria-label="Fechar aviso"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#close"></use></svg></button></div>
+    <h2 id="dialog-title">Devolução</h2><p id="dialog-description"></p>
+    <div id="return-quantity-fields" class="field return-fields" hidden><label for="return-quantity">Quantidade devolvida suja</label><input type="number" id="return-quantity" min="1" step="1" required></div>
+    <p class="dialog-detail"></p><button type="button" class="button button-blue dialog-confirm">Entendi</button>
+  </dialog>
 </body>
 </html>

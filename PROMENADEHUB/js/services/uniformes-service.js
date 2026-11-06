@@ -1,86 +1,38 @@
-/**
- * Ponto único de integração do painel. Nenhuma API foi definida nesta etapa.
- * Não cria registros de demonstração nem usa armazenamento no navegador.
- *
- * Contrato de apresentação para a futura integração (não define regras do ciclo):
- * {
- *   connection: 'ready' | 'not-configured',
- *   inventory: [{ id, available, inStock, total }],
- *   indicators: { activeLoans, returnsToday, atLaundry, totalStock } | null,
- *   loans: [{ code, employee: { name, registration, department },
- *     items: [{ uniform, label, size, quantity }], status,
- *     loanDate: 'YYYY-MM-DD', updatedAt: 'ISO-8601' }]
- * }
- * Quantidades/indicadores devem vir do backend; não são calculados pela tela.
- * Autorização e transições do ciclo serão definidas na etapa de backend.
- */
-export async function loadUniformesDashboard() {
-  return {
-    connection: 'not-configured',
-    inventory: [],
-    indicators: null,
-    loans: []
-  };
-}
-
-/**
- * Cadastros da página Novo Empréstimo. Dados reais e condições devem vir do backend.
- * Contrato de apresentação:
- * {
- *   connection: 'ready' | 'not-configured',
- *   employees: [{ id, name, registration }], sectors: [{ id, label }],
- *   responsibles: [{ id, label }], conditions: [{ id, label }],
- *   uniforms: [{ id, label, icon, available, variants: [{ id, color, size }] }]
- * }
- * Disponibilidade não é recalculada a partir do formulário. Não há reservas,
- * transições de ciclo, mesclagem de itens ou geração de códigos nesta etapa.
- */
-export async function loadNewLoanContext() {
-  return {
-    connection: 'not-configured', employees: [], sectors: [],
-    responsibles: [], conditions: [], uniforms: []
-  };
-}
-
+/** API local real; nenhuma operação utiliza localStorage ou dados de demonstração. */
 export class UniformesIntegrationError extends Error {
-  constructor(operation) {
-    super(`${operation} indisponível: o backend e as regras operacionais ainda não foram integrados. Nenhum dado foi salvo.`);
-    this.name = 'UniformesIntegrationError';
-    this.code = 'BACKEND_NOT_CONFIGURED';
+  constructor(message, code='NETWORK_ERROR') { super(message); this.name='UniformesIntegrationError'; this.code=code; }
+}
+const pendingRequests=new Map();
+async function request(path,{payload}={}) {
+  const key=payload===undefined?null:`${path}:${JSON.stringify(payload)}`;
+  if(key&&!pendingRequests.has(key)) pendingRequests.set(key,crypto.randomUUID());
+  let response;
+  try {
+    response=await fetch(`/api/uniformes${path}`,{
+      method:key?'POST':'GET',credentials:'same-origin',cache:'no-store',
+      headers:key?{'Content-Type':'application/json','X-Promenade-Request':'1','Idempotency-Key':pendingRequests.get(key)}:{},
+      ...(key?{body:JSON.stringify(payload)}:{})
+    });
+  } catch {
+    throw new UniformesIntegrationError('Não foi possível contatar o servidor. Verifique a conexão local e tente novamente. O resultado da operação ainda não foi confirmado.');
   }
+  let data;
+  try{data=await response.json();}catch{throw new UniformesIntegrationError('Resposta inválida do servidor. O resultado da operação ainda não foi confirmado.');}
+  if(!response.ok) {
+    if(key&&response.status<500) pendingRequests.delete(key);
+    throw new UniformesIntegrationError(data?.error?.message??'Não foi possível concluir a operação.',data?.error?.code??'SERVER_ERROR');
+  }
+  if(key) pendingRequests.delete(key);
+  return data;
 }
-
-// Pontos de integração explícitos: não enviam dados nem simulam persistência.
-export async function registerUniformesLoan() {
-  throw new UniformesIntegrationError('Registro de empréstimo');
-}
-export async function saveUniformesLoanDraft() {
-  throw new UniformesIntegrationError('Salvar rascunho');
-}
-
-/** Página 03: a elegibilidade deve ser fornecida pelo backend, nunca inferida do status.
- * { connection: 'ready' | 'not-configured', items: [{ id, loanCode,
- *   employee: { id, name, department }, uniform: { id, label, size, icon },
- *   loanDate: 'YYYY-MM-DD', status: { label, tone }, eligible: boolean }] }
- * Cada linha representa um item identificável; itens sem elegibilidade não são selecionáveis.
- * O servidor deverá revalidar permissões e elegibilidade ao efetuar o envio.
- */
-export async function loadLaundryDispatchItems() {
-  return { connection: 'not-configured', items: [] };
-}
-export async function dispatchUniformesToLaundry() {
-  throw new UniformesIntegrationError('Envio para a lavanderia');
-}
-
-/** Página 04: o backend deve informar os itens e sua elegibilidade para recebimento.
- * Mesmo contrato de itens da página 03, com sentDate ('YYYY-MM-DD') em vez de loanDate.
- * Campo adicional do contexto: afterReceiptStatus: { label: string } | null.
- * O status após recebimento é uma informação do backend, não uma transição definida na tela.
- * O servidor deverá revalidar permissões, elegibilidade e aplicar a transação efetiva.
- */
-export async function loadLaundryReceiptItems() {
-  return { connection: 'not-configured', items: [], afterReceiptStatus: null };
-}
-export async function receiveUniformesFromLaundry() {
-  throw new UniformesIntegrationError('Recebimento da lavanderia');
-}
+export const loadUniformesDashboard=()=>request('/dashboard');
+export const loadNewLoanContext=()=>request('/context');
+export const registerUniformesLoan=(payload)=>request('/loans',{payload});
+export const saveUniformesLoanDraft=(payload)=>request('/drafts',{payload});
+export const listUniformesDrafts=()=>request('/drafts');
+export const readUniformesDraft=(id)=>request(`/drafts/${encodeURIComponent(id)}`);
+export const returnUniformes=(payload)=>request('/returns',{payload});
+export const loadLaundryDispatchItems=()=>request('/laundry/dispatch');
+export const dispatchUniformesToLaundry=(payload)=>request('/laundry/dispatch',{payload});
+export const loadLaundryReceiptItems=()=>request('/laundry/receive');
+export const receiveUniformesFromLaundry=(payload)=>request('/laundry/receive',{payload});

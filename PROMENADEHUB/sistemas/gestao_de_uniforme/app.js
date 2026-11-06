@@ -1,11 +1,14 @@
-import { loadUniformesDashboard } from '../../js/services/uniformes-service.js';
+import { loadUniformesDashboard, returnUniformes } from '../../js/services/uniformes-service.js';
 import { filterLoans, isDateRangeValid } from '../../js/modules/uniformes-filters.js';
+import { createNoticeDialog } from '../../js/components/dialog.js';
 
 const $ = (selector) => document.querySelector(selector);
 const body = $('#loans-body');
 const panel = $('.loans-panel');
 const filterForm = $('#extra-filters');
 const filtersToggle = $('#toggle-filters');
+const returnDialog=createNoticeDialog($('#return-dialog'));
+let returning=false;
 const allRecordsView = document.body.dataset.loanView === 'all';
 const previewLimit = 6;
 const filterParameters = { search: 'q', status: 'status', uniform: 'uniform', 'start-date': 'start', 'end-date': 'end' };
@@ -17,6 +20,7 @@ const statusLabels = {
 };
 let dashboard = null;
 let loadingFailed = false;
+let restoredCatalogFilter = false;
 
 const element = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -107,11 +111,39 @@ function renderLoan(loan) {
   const updated = element('td');
   const date = loan.updatedAt ? new Date(loan.updatedAt) : null;
   updated.textContent = date && !Number.isNaN(date.getTime())
-    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date) : '—';
-  // Nenhuma operação ou transição é inferida antes da definição das regras.
-  const actions = element('td', 'cell-action-note', 'Operações pendentes');
+    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(date) : '—';
+  const actions = element('td','cell-action-note');
+  if(loan.returnableQuantity>0) {
+    const button=element('button','button button-return','Devolver sujo'); button.type='button';
+    button.addEventListener('click',()=>openReturn(loan,button)); actions.append(button);
+  } else if(loan.status==='em-devolucao'||loan.status==='na-lavanderia') {
+    const link=element('a','button button-secondary',loan.status==='em-devolucao'?'Enviar p/ Lavanderia':'Receber da Lavanderia');
+    link.href=`./${loan.status==='em-devolucao'?'enviar':'receber'}-lavanderia.html?item=${encodeURIComponent(loan.lineId)}`;actions.append(link);
+  } else actions.textContent='Ciclo concluído';
   row.append(person, items, status, updated, actions);
   return row;
+}
+
+function openReturn(loan,origin) {
+  if(returning) return;
+  const input=$('#return-quantity'); input.setCustomValidity(''); input.value=String(loan.returnableQuantity); input.max=String(loan.returnableQuantity);
+  $('#return-quantity-fields').hidden=false;
+  returnDialog.open({title:'Devolver uniforme sujo',description:`${loan.code}: informe quantas peças retornaram do funcionário. Saldo com o funcionário: ${loan.returnableQuantity}.`,detail:'Peças devolvidas sujas só voltam ao saldo disponível após a lavanderia.',confirmLabel:'Registrar devolução',origin,
+    validate:()=>{const value=Number(input.value);input.setCustomValidity(Number.isSafeInteger(value)&&value>0&&value<=loan.returnableQuantity?'':`Informe uma quantidade inteira entre 1 e ${loan.returnableQuantity}.`);return input.reportValidity();},
+    onConfirm:async()=>{
+      returning=true; origin.disabled=true;
+      try {
+        const result=await returnUniformes({items:[{id:loan.lineId,quantity:Number(input.value),version:loan.version}]});
+        if(result?.processed!==1) throw Error('Confirmação inválida');
+        await loadDashboard(); $('#return-quantity-fields').hidden=true;
+        panel.setAttribute('tabindex','-1');
+        returnDialog.open({title:'Devolução registrada',description:'A devolução suja foi salva. As peças estão disponíveis para envio à lavanderia.',detail:'Dados salvos.',origin:panel});
+      } catch(error) {
+        $('#return-quantity-fields').hidden=true;
+        returnDialog.open({title:'Devolução não confirmada',description:error.message||'Não foi possível confirmar a operação.',detail:'O resultado ainda não foi confirmado.',origin});
+      } finally { returning=false; origin.disabled=false; }
+    }
+  });
 }
 
 function renderLoans() {
@@ -144,8 +176,22 @@ function renderLoans() {
 
 function renderSummary() {
   const connected = dashboard?.connection === 'ready';
+  if(connected) {
+    for(const item of dashboard.inventory??[]) {
+      let option=[...$('#uniform').options].find(entry=>entry.value===item.id);
+      if(!option) { option=new Option(item.label,item.id); $('#uniform').append(option); }
+      else option.textContent=item.label;
+    }
+    if(!restoredCatalogFilter) {
+      const requested=new URLSearchParams(window.location.search).get('uniform');
+      if(requested&&[...$('#uniform').options].some(entry=>entry.value===requested)) {$('#uniform').value=requested;filterForm.hidden=false;filtersToggle.setAttribute('aria-expanded','true');filtersToggle.querySelector('span').textContent='Ocultar Filtros';}
+      restoredCatalogFilter=true;
+    }
+  }
   document.querySelectorAll('[data-uniform]').forEach((card) => {
     const stock = connected ? dashboard.inventory?.find((item) => item.id === card.dataset.uniform) : null;
+    if(stock?.label) card.querySelector('h2').textContent=stock.label.toLocaleUpperCase('pt-BR');
+    card.title=stock?'Em estoque: peças limpas disponíveis mais peças devolvidas sujas na portaria.':'Modelo ainda não cadastrado.';
     card.querySelector('[data-available]').textContent = quantity(stock?.available);
     card.querySelector('[data-total]').textContent = quantity(stock?.inStock);
     const total = card.querySelector('[data-garment-total]');

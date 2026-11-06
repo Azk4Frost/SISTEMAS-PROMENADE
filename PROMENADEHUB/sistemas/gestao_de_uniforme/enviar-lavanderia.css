@@ -61,3 +61,8 @@
  .dispatch-help { text-align: left; }
  .dispatch-table input[type='checkbox'] { width: 20px; height: 20px; }
 }
+
+.laundry-quantity { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:8px; color:#6c7c95; font-size:10px; }
+.laundry-quantity input { width:70px; min-height:32px; padding:5px; font-size:12px; }
+.laundry-quantity input[aria-invalid='true'] { border-color:#bd3838; }
+.selection-count { white-space:normal; }

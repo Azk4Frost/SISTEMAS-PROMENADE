@@ -5,7 +5,7 @@ mountLaundrySelection({
   prefix: 'receipt', action: 'recebimento', dateKey: 'sentDate',
   load: loadLaundryReceiptItems, submit: receiveUniformesFromLaundry,
   onSummary(summary, context) {
-    document.querySelector('#summary-returning').textContent = summary.items;
+    document.querySelector('#summary-returning').textContent = summary.pieces;
     const label = context?.connection === 'ready' ? context.afterReceiptStatus?.label : null;
     document.querySelector('#summary-after-status').textContent = typeof label === 'string' && label.trim() ? label : 'Não informado';
   }

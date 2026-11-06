@@ -177,3 +177,13 @@
 @layer components {
   .dialog-open { overflow: hidden; }
 }
+
+@layer components {
+ .button-return { color:#99610a; background:#fff5df; border-color:#efd7a6; }
+ .cell-action-note .button { font-size:10px; padding:5px 7px; min-height:30px; }
+ .return-fields { margin-top:18px; }
+ .loan-drafts { margin-bottom:18px; }
+ .loan-drafts summary { padding:12px 14px; color:#315d99; cursor:pointer; font-size:12px; font-weight:700; }
+ .draft-entry { padding:10px 14px; display:block; border-top:1px solid #e6edf7; color:#42668e; font-size:12px; }
+ .draft-entry:hover { background:#f3f7ff; }
+}

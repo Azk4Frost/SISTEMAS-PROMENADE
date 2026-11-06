@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { isLoanContext, isPositiveQuantity, validateLoanItem, buildLoanItem, validateLoanDetails, formItemTotals, loanPayload, uniformIcon } from '../PROMENADEHUB/js/modules/novo-emprestimo-model.js';
-import { loadNewLoanContext, registerUniformesLoan, saveUniformesLoanDraft, UniformesIntegrationError } from '../PROMENADEHUB/js/services/uniformes-service.js';
 
 // Fixtures exclusivas do runner de testes. Não são carregadas no frontend.
 const context = {
@@ -62,13 +61,4 @@ test('payload exclui IDs temporários e rótulos de apresentação', () => {
     ...details, notes: 'Observação de teste',
     items: [{ variantId: 'variant-m-test', quantity: 2, conditionId: 'condition-test' }]
   });
-});
-test('sem integração: cadastros vazios e operações recusadas sem sucesso simulado', async () => {
-  const result = await loadNewLoanContext();
-  assert.equal(isLoanContext(result), true);
-  assert.equal(result.connection, 'not-configured');
-  assert.deepEqual(result.uniforms, []);
-  for (const operation of [registerUniformesLoan, saveUniformesLoanDraft]) {
-    await assert.rejects(operation(loanPayload(details, [])), (error) => error instanceof UniformesIntegrationError && error.code === 'BACKEND_NOT_CONFIGURED');
-  }
 });

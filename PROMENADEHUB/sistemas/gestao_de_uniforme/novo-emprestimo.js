@@ -1,4 +1,4 @@
-import { loadNewLoanContext, registerUniformesLoan, saveUniformesLoanDraft, UniformesIntegrationError } from '../../js/services/uniformes-service.js';
+import { loadNewLoanContext, registerUniformesLoan, saveUniformesLoanDraft, UniformesIntegrationError, listUniformesDrafts, readUniformesDraft } from '../../js/services/uniformes-service.js';
 import { isLoanContext, validateLoanItem, buildLoanItem, validateLoanDetails, formItemTotals, loanPayload, uniformIcon } from '../../js/modules/novo-emprestimo-model.js';
 import { createNoticeDialog } from '../../js/components/dialog.js';
 
@@ -14,6 +14,9 @@ let nextItemId = 1;
 let baseline = '';
 let allowNavigation = false;
 let saving = false;
+let draftId=null;
+let draftVersion=null;
+let restoredDraft=false;
 
 function node(tag, className, text) {
   const result = document.createElement(tag);
@@ -45,7 +48,7 @@ function getItemValues() {
 const signature = () => JSON.stringify({ ...getDetails(), composer: getItemValues(), items });
 const isDirty = () => baseline !== '' && signature() !== baseline;
 function showNotice(title, description, origin) {
-  dialog.open({ title, description, origin });
+  dialog.open({ title, description, origin, detail: title.endsWith('salvo')||title.endsWith('registrado')?'Dados salvos.':'Revise os dados e tente novamente.' });
 }
 function missingContext(origin) {
   showNotice('Cadastros indisponíveis', 'Não é possível adicionar peças sem os cadastros de uniformes, variações e condições. A integração com os dados reais do clube ainda está pendente.', origin);
@@ -167,7 +170,7 @@ function renderAvailability() {
   }
 }
 async function loadContext() {
-  form.setAttribute('aria-busy', 'true');
+  form.setAttribute('aria-busy', 'true'); form.inert=true;
   $('#retry-context').hidden = true;
   $('#loan-context-notice').classList.remove('is-error');
   $('#loan-context-notice span').textContent = 'Consultando cadastros e disponibilidade…';
@@ -186,14 +189,45 @@ async function loadContext() {
   options('#uniform-type', connected ? context.uniforms : [], 'Selecione o tipo', connected ? 'Sem uniformes' : 'Sem catálogo');
   options('#condition', connected ? context.conditions : [], 'Selecione a condição', connected ? 'Nenhuma condição cadastrada' : 'Condições indisponíveis');
   updateColors();
-  const message = failed ? 'Não foi possível consultar os cadastros. Tente novamente; nenhum dado foi salvo.' : connected ? 'Cadastros consultados. O preenchimento não reserva peças nem registra um empréstimo.' : 'Integração pendente. Cadastros e estoque indisponíveis; registrar e salvar rascunho ainda não estão disponíveis.';
+  if(context?.conditions.length===1) $('#condition').value=context.conditions[0].id;
+  const message = failed ? 'Não foi possível consultar os cadastros. Tente novamente.' : connected ? 'Cadastros consultados. O preenchimento não reserva peças nem registra um empréstimo.' : 'Integração pendente. Cadastros e estoque indisponíveis; registrar e salvar rascunho ainda não estão disponíveis.';
   $('#loan-context-notice span').textContent = message;
   $('#loan-context-notice').classList.toggle('is-error', failed);
   $('#retry-context').hidden = !failed;
   $('#loan-connection').textContent = failed ? 'Falha na consulta' : connected ? 'Cadastros consultados' : 'Integração de dados pendente';
   renderAvailability(); updateSummary();
-  form.setAttribute('aria-busy', 'false');
+
+  if(!restoredDraft) { await restoreDraft(); restoredDraft=true; }
   if (!baseline) baseline = signature();
+  await renderDraftList();
+  form.inert=false; form.setAttribute('aria-busy','false');
+}
+
+async function renderDraftList() {
+  const container=$('#draft-list');container.replaceChildren();
+  try {
+    const result=await listUniformesDrafts();
+    if(!result.drafts.length) container.append(node('p','draft-entry','Nenhum rascunho salvo.'));
+    for(const draft of result.drafts) {
+      const link=node('a','draft-entry',`Rascunho ${draft.id} · ${draft.employeeName}`);
+      link.href=`./novo-emprestimo.html?draft=${encodeURIComponent(draft.id)}`;container.append(link);
+    }
+  } catch { container.textContent='Não foi possível consultar os rascunhos. Recarregue a página para tentar novamente.'; }
+}
+async function restoreDraft() {
+  const requested=new URLSearchParams(window.location.search).get('draft');
+  if(!requested||context?.connection!=='ready') return;
+  try {
+    const draft=await readUniformesDraft(requested);
+    for(const [id,key] of [['loan-date','date'],['employee','employeeId'],['sector','sectorId'],['responsible','responsibleId'],['notes','notes']]) $('#'+id).value=draft[key]??'';
+    items=draft.items.map(entry=>{
+      const uniform=context.uniforms.find(model=>model.variants.some(variant=>variant.id===entry.variantId));
+      const variant=uniform.variants.find(variant=>variant.id===entry.variantId);
+      return buildLoanItem({uniformId:uniform.id,color:variant.color,size:variant.size,quantity:entry.quantity,conditionId:entry.conditionId},context,`form-item-${nextItemId++}`);
+    });
+    draftId=draft.id;draftVersion=draft.version;renderItems();updateSummary();
+    $('#form-status').textContent=`Rascunho ${draftId} carregado. Estoque não reservado.`;
+  } catch(error) { showNotice('Não foi possível abrir o rascunho',error.message,$('#loan-form')); }
 }
 
 $('#add-item').addEventListener('click', () => {
@@ -202,6 +236,10 @@ $('#add-item').addEventListener('click', () => {
   const values = getItemValues();
   const errors = validateLoanItem(values, context);
   if (Object.keys(errors).length) { showErrors(errors); return; }
+  const uniform=context.uniforms.find(entry=>entry.id===values.uniformId);
+  const variant=uniform.variants.find(entry=>entry.color===values.color&&entry.size===values.size);
+  const already=items.filter(entry=>entry.variantId===variant.id&&entry.id!==editingId).reduce((n,entry)=>n+entry.quantity,0);
+  if(Number.isSafeInteger(variant.available)&&already+Number(values.quantity)>variant.available) { showErrors({quantity:'A soma das peças adicionadas supera o estoque limpo disponível.'});return; }
   const wasEditing = editingId !== null;
   const item = buildLoanItem(values, context, editingId ?? `form-item-${nextItemId++}`);
   if (wasEditing) items = items.map((entry) => entry.id === editingId ? item : entry);
@@ -229,6 +267,8 @@ async function persist(mode, origin) {
     showNotice('Edição de item em andamento', 'Salve ou cancele a edição do item antes de continuar. Nenhum dado foi salvo.', origin); return;
   }
   const values = getDetails();
+  const composer=getItemValues();
+  if(composer.uniformId) { showNotice('Peça ainda não adicionada','Adicione a peça à lista ou limpe sua seleção antes de salvar.',origin);return; }
   if (mode === 'register' && context?.connection === 'ready') {
     const errors = validateLoanDetails(values, context, items);
     if (Object.keys(errors).length) { showErrors(errors); return; }
@@ -237,10 +277,25 @@ async function persist(mode, origin) {
   $('#register-loan').disabled = true; $('#save-draft').disabled = true;
   try {
     const operation = mode === 'register' ? registerUniformesLoan : saveUniformesLoanDraft;
-    await operation(loanPayload(values, items));
-    // O serviço atual sempre rejeita: a integração e sua confirmação são uma etapa futura.
+    const payload={...loanPayload(values,items),...(draftId?{draftId,draftVersion}:{})};
+    const result=await operation(payload);
+    if(!result?.id || (mode==='register'&&!result.code) || (mode==='draft'&&!result.version)) throw Error('Confirmação inválida do servidor.');
+    if(mode==='draft') {
+      draftId=result.id;draftVersion=result.version;baseline=signature();
+      const url=new URL(window.location.href);url.searchParams.set('draft',draftId);history.replaceState(null,'',url);
+      $('#form-status').textContent=`Rascunho ${draftId} salvo no banco. Estoque não reservado.`;
+      showNotice('Rascunho salvo',`Rascunho ${draftId} gravado. Ele pode ser reaberto em Rascunhos salvos.`,origin);
+      await renderDraftList();
+    } else {
+      items=[];draftId=null;draftVersion=null;resetComposer();renderItems();
+      for(const id of ['employee','sector','responsible','notes']) $('#'+id).value='';
+      const url=new URL(window.location.href);url.searchParams.delete('draft');history.replaceState(null,'',url);
+      baseline=''; await loadContext();baseline=signature();
+      $('#form-status').textContent=`${result.code} registrado no banco.`;
+      showNotice('Empréstimo registrado',`${result.code} gravado. O estoque limpo disponível foi atualizado.`,origin);
+    }
   } catch (error) {
-    showNotice(error instanceof UniformesIntegrationError ? 'Integração pendente' : 'Não foi possível salvar', error instanceof UniformesIntegrationError ? error.message : 'Não foi possível concluir a operação. Os campos permanecem no formulário; nenhum salvamento foi confirmado.', origin);
+    showNotice('Não foi possível salvar', error instanceof UniformesIntegrationError ? error.message : 'Não foi possível concluir a operação. Os campos permanecem no formulário; nenhum salvamento foi confirmado.', origin);
   } finally {
     saving = false;
     $('#register-loan').disabled = false; $('#save-draft').disabled = false;
@@ -254,8 +309,8 @@ document.addEventListener('click', (event) => {
   if (!link || link.getAttribute('href').startsWith('#') || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !isDirty()) return;
   event.preventDefault();
   dialog.open({
-    title: 'Descartar preenchimento?', description: 'As alterações deste formulário ainda não foram salvas. Deseja descartá-las e sair desta página?',
-    detail: 'Nenhum empréstimo foi registrado.', confirmLabel: 'Descartar e sair', origin: link,
+    title: 'Descartar preenchimento?', description: 'Deseja descartar o preenchimento desta página e sair?',
+    detail: 'Consulte o painel para conferir os registros já confirmados.', confirmLabel: 'Descartar e sair', origin: link,
     onConfirm() { allowNavigation = true; window.location.assign(link.href); }
   });
 });

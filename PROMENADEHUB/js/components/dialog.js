@@ -2,11 +2,13 @@
 export function createNoticeDialog(dialog) {
   let trigger = null;
   let confirmAction = null;
+  let validateAction = null;
   const close = () => dialog.close();
   dialog.querySelectorAll('.dialog-close, .dialog-cancel').forEach((button) => {
     button.addEventListener('click', close);
   });
   dialog.querySelector('.dialog-confirm').addEventListener('click', () => {
+    if (validateAction && !validateAction()) return;
     const action = confirmAction;
     close();
     action?.();
@@ -37,9 +39,10 @@ export function createNoticeDialog(dialog) {
     if (trigger?.isConnected) trigger.focus();
   });
   return {
-    open({ title, description, origin, onConfirm = null, confirmLabel = 'Entendi', detail = 'Nenhuma operação foi realizada.' }) {
+    open({ title, description, origin, onConfirm = null, confirmLabel = 'Entendi', detail = 'Nenhuma operação foi realizada.', validate = null }) {
       trigger = origin ?? document.activeElement;
       confirmAction = onConfirm;
+      validateAction = validate;
       dialog.querySelector('#dialog-title').textContent = title;
       dialog.querySelector('#dialog-description').textContent = description;
       dialog.querySelector('.dialog-detail').textContent = detail;

@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { filterLoans, isDateRangeValid } from '../PROMENADEHUB/js/modules/uniformes-filters.js';
-import { loadUniformesDashboard } from '../PROMENADEHUB/js/services/uniformes-service.js';
 
 // Fixtures exclusivas de testes; não são importadas ou exibidas pela aplicação.
 const loans = [
@@ -35,9 +34,4 @@ test('limpar filtros preserva todos os registros sem modificar a origem', () => 
   const before = structuredClone(loans);
   assert.deepEqual(filterLoans(loans, {}), loans);
   assert.deepEqual(loans, before);
-});
-test('serviço sem backend informa indisponibilidade em vez de fabricar dados ou totais', async () => {
-  assert.deepEqual(await loadUniformesDashboard(), {
-    connection: 'not-configured', inventory: [], indicators: null, loans: []
-  });
 });

@@ -11,6 +11,7 @@ export function mountLaundrySelection({ prefix, action, dateKey, load, submit, o
   const retry = $(`#retry-${prefix}`);
   const dialog = createNoticeDialog(part('dialog'));
   const selectedIds = new Set();
+  const quantities = new Map();
   let context = null;
   let submitting = false;
   let allowNavigation = false;
@@ -27,23 +28,25 @@ export function mountLaundrySelection({ prefix, action, dateKey, load, submit, o
     use.setAttribute('href', `../../assets/icons/ui.svg#${name}`); svg.append(use); return svg;
   }
   function updateSelection() {
-    const summary = laundrySelectionSummary(context, selectedIds);
+    const summary = laundrySelectionSummary(context, selectedIds, quantities);
     $('#summary-items').textContent = summary.items;
     if ($('#summary-types')) $('#summary-types').textContent = summary.types;
     if ($('#summary-employees')) $('#summary-employees').textContent = summary.employees;
-    $('#selected-count').textContent = `${summary.items} ${summary.items === 1 ? 'item selecionado' : 'itens selecionados'}`;
+    $('#selected-count').textContent = `${summary.items} ${summary.items===1?'item selecionado':'itens selecionados'} · ${summary.pieces} ${summary.pieces===1?'peça':'peças'}`;
     const eligible = eligibleItems(context);
     const eligibleIds = new Set(eligible.map((item) => item.id));
     const all = $('#select-all');
     all.disabled = submitting || !eligible.length;
     all.checked = eligible.length > 0 && summary.items === eligible.length;
     all.indeterminate = summary.items > 0 && summary.items < eligible.length;
-    confirm.disabled = submitting || !summary.items;
-    part('help').textContent = summary.items ? `A seleção não altera os registros. O ${action} real depende da integração com o backend.` : 'Selecione ao menos um item elegível para habilitar a confirmação.';
+    confirm.disabled = submitting || !summary.items || !summary.valid;
+    part('help').textContent = !summary.valid ? 'Informe quantidades inteiras, maiores que zero e dentro do saldo de cada item.' : summary.items ? 'Confira as quantidades antes de confirmar a movimentação.' : 'Selecione ao menos um item elegível para habilitar a confirmação.';
     document.querySelectorAll('[data-item-id]').forEach((checkbox) => {
       checkbox.checked = selectedIds.has(checkbox.dataset.itemId);
       checkbox.disabled = submitting || !eligibleIds.has(checkbox.dataset.itemId);
       checkbox.closest('tr').classList.toggle('is-selected', checkbox.checked);
+      const amount = checkbox.closest('tr').querySelector('[data-quantity]');
+      if(amount) { amount.disabled=submitting||!checkbox.checked; amount.setAttribute('aria-invalid',String(checkbox.checked&&!amount.checkValidity())); }
     });
     onSummary(summary, context);
   }
@@ -70,6 +73,11 @@ export function mountLaundrySelection({ prefix, action, dateKey, load, submit, o
       const employee = node('td'); employee.append(node('span', 'cell-primary', item.employee.name), node('span', 'cell-secondary', item.employee.department ?? ''));
       const uniform = node('td'); const label = node('div', 'dispatch-item-name');
       label.append(icon(uniformIcon(item.uniform.icon)), node('span', '', [item.uniform.label, item.uniform.size].filter(Boolean).join(' · '))); uniform.append(label);
+      const quantityLabel=node('label','laundry-quantity',`Quantidade (saldo: ${item.availableQuantity})`);
+      const amount=node('input'); amount.type='number'; amount.min='1'; amount.max=String(item.availableQuantity); amount.step='1'; amount.value=String(item.availableQuantity); amount.dataset.quantity=item.id; amount.required=true;
+      amount.setAttribute('aria-label',`Quantidade de ${item.uniform.label}, empréstimo ${item.loanCode}`);
+      amount.addEventListener('input',()=>{quantities.set(item.id,Number(amount.value));updateSelection();});
+      quantities.set(item.id,item.availableQuantity); quantityLabel.append(amount); uniform.append(quantityLabel);
       const rawDate = item[dateKey];
       const date = typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate.split('-').reverse().join('/') : '—';
       const status = node('td');
@@ -85,7 +93,7 @@ export function mountLaundrySelection({ prefix, action, dateKey, load, submit, o
     retry.hidden = true;
     part('notice').querySelector('span').textContent = `Consultando os itens disponíveis para ${action}…`;
     part('notice').classList.remove('is-error');
-    selectedIds.clear(); context = null; updateSelection();
+    selectedIds.clear(); quantities.clear(); context = null; updateSelection();
     try {
       const result = await load();
       if (!isLaundrySelectionContext(result)) throw new Error('Resposta inválida');
@@ -96,13 +104,17 @@ export function mountLaundrySelection({ prefix, action, dateKey, load, submit, o
         part('connection').textContent = 'Integração de dados pendente';
       } else {
         if (!context.items.length) renderEmpty('Nenhum item para exibir', 'A consulta não retornou itens para esta página.');
-        else renderRows();
+        else {
+          renderRows();
+          const requested=new URLSearchParams(window.location.search).get('item');
+          if(requested&&eligibleItems(context).some(item=>item.id===requested)) selectedIds.add(requested);
+        }
         part('notice').querySelector('span').textContent = eligibleItems(context).length ? `Selecione os itens para preparar o ${action}. Nenhuma movimentação é realizada ao selecionar.` : 'Nenhum item está disponível para seleção nos dados consultados.';
         part('connection').textContent = 'Dados consultados';
       }
     } catch {
       context = null;
-      renderEmpty('Não foi possível consultar os itens', `Tente novamente. Nenhum ${action} foi realizado.`);
+      renderEmpty('Não foi possível consultar os itens', 'Não foi possível atualizar a lista. Verifique o servidor e tente novamente.');
       part('notice').querySelector('span').textContent = 'Falha na consulta dos dados. Tente novamente.';
       part('notice').classList.add('is-error');
       part('connection').textContent = 'Falha na consulta';
@@ -123,12 +135,17 @@ export function mountLaundrySelection({ prefix, action, dateKey, load, submit, o
     if (submitting || !selectedLaundryItems(context, selectedIds).length) return;
     submitting = true; updateSelection();
     try {
-      await submit(laundrySelectionPayload(context, selectedIds));
-      // Os serviços atuais sempre rejeitam. Nenhuma confirmação é simulada.
+      const payload=laundrySelectionPayload(context,selectedIds,quantities);
+      const result=await submit(payload);
+      if(result?.processed!==payload.items.length) throw Error('Confirmação inválida');
+      await loadItems();
+      part('panel').setAttribute('tabindex','-1');
+      dialog.open({title:action==='envio'?'Envio registrado':'Recebimento registrado',description:'A movimentação foi gravada no banco e os saldos foram atualizados.',detail:'Dados salvos.',origin:part('panel')});
     } catch (error) {
       dialog.open({
-        title: error instanceof UniformesIntegrationError ? 'Integração pendente' : `${action === 'envio' ? 'Envio' : 'Recebimento'} não confirmado`,
+        title: `${action === 'envio' ? 'Envio' : 'Recebimento'} não confirmado`,
         description: error instanceof UniformesIntegrationError ? error.message : `Não foi possível confirmar o ${action}. A seleção foi preservada; nenhuma alteração foi confirmada.`,
+        detail: 'O resultado não foi confirmado. A seleção foi preservada.',
         origin: confirm
       });
     } finally { submitting = false; updateSelection(); }
@@ -139,7 +156,7 @@ export function mountLaundrySelection({ prefix, action, dateKey, load, submit, o
     event.preventDefault();
     dialog.open({
       title: 'Descartar seleção?', description: 'A seleção desta página ainda não foi confirmada. Deseja descartá-la e sair?',
-      detail: `Nenhum ${action} foi realizado.`, confirmLabel: 'Descartar e sair', origin: link,
+      detail: 'A seleção atual será descartada desta página. Confira os registros no painel.', confirmLabel: 'Descartar e sair', origin: link,
       onConfirm() { allowNavigation = true; window.location.assign(link.href); }
     });
   });
