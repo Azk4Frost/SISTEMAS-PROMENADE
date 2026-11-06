@@ -9,7 +9,7 @@
   <script type="module" src="./app.js"></script>
   <title>Promenade Hub | Sistema de Uniformes</title>
 </head>
-<body class="min-h-screen bg-slate-50 font-sans text-slate-800 antialiased">
+<body data-loan-view="preview" class="min-h-screen bg-slate-50 font-sans text-slate-800 antialiased">
   <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
   <header class="hub-header">
     <div class="hub-header-inner">
@@ -33,12 +33,12 @@
         <a class="button button-blue" href="./novo-emprestimo.html">
           <svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#plus"></use></svg>Novo Empréstimo
         </a>
-        <button type="button" class="button button-amber" data-pending="Enviar p/ Lavanderia" aria-haspopup="dialog">
+        <a class="button button-amber" href="./enviar-lavanderia.html">
           <svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#send"></use></svg>Enviar p/ Lavanderia
-        </button>
-        <button type="button" class="button button-green" data-pending="Receber da Lavanderia" aria-haspopup="dialog">
+        </a>
+        <a class="button button-green" href="./receber-lavanderia.html">
           <svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#receive"></use></svg>Receber da Lavanderia
-        </button>
+        </a>
       </div>
     </div>
 
@@ -92,6 +92,9 @@
           <button class="button button-filter" id="toggle-filters" type="button" aria-expanded="false" aria-controls="extra-filters">
             <svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#filter"></use></svg><span>Ver Filtros</span>
           </button>
+          <a class="button button-blue button-view-all" id="loans-view-link" href="./todos-emprestimos.html" title="Ver todos os registros carregados">
+            <svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#list"></use></svg>Ver tudo
+          </a>
         </div>
       </div>
 
@@ -118,12 +121,5 @@
     <footer class="dashboard-footer"><a href="../../sistemas.html">Promenade Country Club <span aria-hidden="true">/</span> Sistemas</a><span>Gestão de Uniformes</span></footer>
   </main>
 
-  <dialog id="pending-dialog" class="hub-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description">
-    <div class="dialog-header"><span class="dialog-icon"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#info"></use></svg></span><button type="button" class="dialog-close" aria-label="Fechar aviso"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#close"></use></svg></button></div>
-    <h2 id="dialog-title">Página pendente</h2>
-    <p id="dialog-description"></p>
-    <p class="dialog-detail">Nenhuma operação foi realizada.</p>
-    <button type="button" class="button button-blue dialog-confirm">Entendi</button>
-  </dialog>
 </body>
 </html>

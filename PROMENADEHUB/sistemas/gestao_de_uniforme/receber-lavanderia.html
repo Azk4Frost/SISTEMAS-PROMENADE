@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Conferência de uniformes no retorno da lavanderia do Promenade Country Club.">
+  <link rel="icon" href="../../assets/promenade-logo.png">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./novo-emprestimo.css">
+  <link rel="stylesheet" href="./enviar-lavanderia.css">
+  <link rel="stylesheet" href="./receber-lavanderia.css">
+  <script type="module" src="./receber-lavanderia.js"></script>
+  <title>Promenade Hub | Receber da Lavanderia</title>
+</head>
+<body class="laundry-page receipt-page min-h-screen font-sans text-slate-800 antialiased">
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+  <header class="hub-header"><div class="hub-header-inner"><a class="hub-brand" href="../../index.html" aria-label="Promenade Hub, início"><img src="../../assets/promenade-logo.png" width="52" height="52" alt=""><span>PROMENADE HUB</span></a><a class="home-link" href="../../index.html" aria-label="Voltar ao início" title="Voltar ao início"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#exit"></use></svg></a></div></header>
+  <main id="conteudo" class="dashboard loan-workspace" tabindex="-1">
+    <nav class="loan-breadcrumb" aria-label="Você está em"><ol><li><a href="../../sistemas.html"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#home"></use></svg>Sistemas</a></li><li><a href="./index.html">Sistema de Uniformes</a></li><li aria-current="page">Receber da Lavanderia</li></ol></nav>
+    <div class="laundry-heading"><span class="laundry-heading-icon"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#washer"></use></svg></span><div><h1>Receber da Lavanderia</h1><p>Confirme os itens que retornaram da lavanderia e atualize o status no sistema.</p></div></div>
+    <div class="laundry-layout grid gap-5">
+      <section class="loan-card" id="receipt-panel" aria-labelledby="items-title" aria-busy="true">
+        <div class="laundry-section-heading"><h2 id="items-title"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#clipboard"></use></svg>Itens em Retorno</h2><span class="selection-count" id="selected-count" role="status" aria-live="polite">0 itens selecionados</span></div>
+        <div class="dispatch-notice" role="status" id="receipt-notice"><span>Consultando os itens disponíveis para recebimento…</span><button class="button button-secondary" type="button" id="retry-receipt" hidden>Tentar novamente</button></div>
+        <noscript><p class="dispatch-notice">Ative o JavaScript para selecionar os itens. O recebimento depende da integração com o backend.</p></noscript>
+        <div class="dispatch-scroll" role="region" aria-label="Itens em retorno, com rolagem horizontal" tabindex="0">
+          <table class="dispatch-table"><caption class="sr-only">Itens de uniformes para conferência de retorno da lavanderia</caption><thead><tr><th scope="col"><input type="checkbox" id="select-all" aria-label="Selecionar todos os itens elegíveis" disabled></th><th scope="col">Cód. Empréstimo</th><th scope="col">Funcionário / Setor</th><th scope="col">Item (Tamanho)</th><th scope="col">Enviado em</th><th scope="col">Status Atual</th></tr></thead><tbody id="receipt-items"><tr><td colspan="6"><div class="dispatch-empty"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#washer"></use></svg><h3>Consultando uniformes…</h3><p>Aguarde o carregamento dos itens.</p></div></td></tr></tbody></table>
+        </div>
+        <div class="table-bottom"><span id="receipt-results">Consultando registros</span><span class="realtime-status"><span class="status-dot" aria-hidden="true"></span><span id="receipt-connection">Conexão pendente</span></span></div>
+      </section>
+      <aside class="loan-card dispatch-summary" aria-labelledby="summary-title"><div class="laundry-section-heading"><h2 id="summary-title"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#clipboard"></use></svg>Resumo do Recebimento</h2></div><dl class="loan-summary"><div><dt><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#list"></use></svg>Itens selecionados</dt><dd id="summary-items">0</dd></div><div><dt><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#washer"></use></svg>Retornando da lavanderia</dt><dd id="summary-returning">0</dd></div><div><dt><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#check"></use></svg>Após o recebimento</dt><dd id="summary-after-status">Não informado</dd></div></dl><div class="dispatch-guidance"><h3>Conferência</h3><ul><li>Confira os uniformes que retornaram antes de confirmar o recebimento.</li><li>A disponibilidade para seleção depende dos dados fornecidos pelo sistema.</li><li>O recebimento real depende da integração com o backend. A seleção desta página não altera o estoque ou o status das peças.</li></ul></div></aside>
+    </div>
+    <div class="dispatch-actions"><a class="button button-secondary" href="./index.html" id="cancel-receipt">← Cancelar</a><button type="button" class="button button-green" id="confirm-receipt" disabled aria-describedby="receipt-help"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#washer"></use></svg>Confirmar Recebimento</button></div><p id="receipt-help" class="dispatch-help">Selecione ao menos um item elegível para habilitar a confirmação.</p>
+    <footer class="dashboard-footer"><a href="./index.html">Promenade Country Club <span aria-hidden="true">/</span> Sistema de Uniformes</a><span>Recebimento da Lavanderia</span></footer>
+  </main>
+  <dialog id="receipt-dialog" class="hub-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description"><div class="dialog-header"><span class="dialog-icon"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#info"></use></svg></span><button type="button" class="dialog-close" aria-label="Fechar aviso"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#close"></use></svg></button></div><h2 id="dialog-title">Integração pendente</h2><p id="dialog-description"></p><p class="dialog-detail">Nenhuma operação foi realizada.</p><div class="loan-dialog-actions"><button type="button" class="button button-secondary dialog-cancel" hidden>Continuar selecionando</button><button type="button" class="button button-green dialog-confirm">Entendi</button></div></dialog>
+</body>
+</html>

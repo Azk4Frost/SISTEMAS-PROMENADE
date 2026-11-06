@@ -31,6 +31,7 @@
   .button .icon { width: 14px; height: 14px; }
   .button-blue { color: white; background: #075bb6; border-color: #075bb6; box-shadow: 0 2px 3px #075bb615; }
   .button-blue:hover { background: #064a96; }
+  .button-view-all { white-space: nowrap; }
   .button-amber { color: #fff; background: #b97305; border-color: #b97305; }
   .button-amber:hover { background: #995d00; }
   .button-green { color: #fff; background: #079c6c; border-color: #079c6c; }
@@ -96,6 +97,7 @@
   td:last-child { text-align: center; }
   .cell-primary { font-weight: 700; color: #334a6a; display: block; }
   .cell-secondary { color: #78869c; font-size: 10px; display: block; margin-top: 3px; }
+  .cell-action-note { color: #78869c; font-size: 10px; }
   .status-badge { display: inline-block; border: 1px solid currentColor; border-radius: 4px; padding: 3px 6px; font-size: 10px; font-weight: 700; }
   .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 246px; padding: 28px; text-align: center; }
   .empty-state > .icon { width: 36px; height: 36px; color: #a1b5d1; margin-bottom: 14px; }
@@ -155,6 +157,7 @@
   .search-field .icon { top: 13px; }
   .table-controls select { flex: 1; min-width: 0; min-height: 40px; font-size: 12px; }
   .button-filter { min-height: 40px; }
+  .button-view-all { flex-basis: 100%; min-height: 40px; }
   .data-notice { margin-inline: 12px; }
   table:has(.empty-state) { min-width: 0; }
   table:has(.empty-state) thead { display: none; }

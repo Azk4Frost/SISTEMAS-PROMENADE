@@ -1,13 +1,14 @@
 import { loadUniformesDashboard } from '../../js/services/uniformes-service.js';
 import { filterLoans, isDateRangeValid } from '../../js/modules/uniformes-filters.js';
-import { createNoticeDialog } from '../../js/components/dialog.js';
 
 const $ = (selector) => document.querySelector(selector);
 const body = $('#loans-body');
 const panel = $('.loans-panel');
 const filterForm = $('#extra-filters');
 const filtersToggle = $('#toggle-filters');
-const notice = createNoticeDialog($('#pending-dialog'));
+const allRecordsView = document.body.dataset.loanView === 'all';
+const previewLimit = 6;
+const filterParameters = { search: 'q', status: 'status', uniform: 'uniform', 'start-date': 'start', 'end-date': 'end' };
 const statusLabels = {
   'com-funcionario': ['Com Funcionário', 'tone-blue'],
   'em-devolucao': ['Em Devolução', 'tone-amber'],
@@ -24,6 +25,28 @@ const element = (tag, className, text) => {
   return node;
 };
 const quantity = (value) => Number.isSafeInteger(value) && value >= 0 ? String(value).padStart(2, '0') : '—';
+
+function updateViewLink() {
+  const destination = new URL(allRecordsView ? './index.html' : './todos-emprestimos.html', window.location.href);
+  for (const [id, parameter] of Object.entries(filterParameters)) {
+    const value = $(`#${id}`).value;
+    if (value) destination.searchParams.set(parameter, value);
+  }
+  $('#loans-view-link').href = destination.href;
+}
+
+function restoreFiltersFromUrl() {
+  const parameters = new URLSearchParams(window.location.search);
+  for (const [id, parameter] of Object.entries(filterParameters)) {
+    const value = parameters.get(parameter);
+    if (value !== null) $(`#${id}`).value = id === 'search' ? value.slice(0, 120) : value;
+  }
+  if (['#uniform', '#start-date', '#end-date'].some((selector) => $(selector).value)) {
+    filterForm.hidden = false;
+    filtersToggle.setAttribute('aria-expanded', 'true');
+    filtersToggle.querySelector('span').textContent = 'Ocultar Filtros';
+  }
+}
 
 function getFilters() {
   return {
@@ -86,7 +109,7 @@ function renderLoan(loan) {
   updated.textContent = date && !Number.isNaN(date.getTime())
     ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date) : '—';
   // Nenhuma operação ou transição é inferida antes da definição das regras.
-  const actions = element('td', 'cell-secondary', 'Operações pendentes');
+  const actions = element('td', 'cell-action-note', 'Operações pendentes');
   row.append(person, items, status, updated, actions);
   return row;
 }
@@ -101,7 +124,9 @@ function renderLoans() {
   const activeFilters = Object.values(filters).some((value) => value.trim());
   const loans = dashboard?.loans ?? [];
   const filtered = filterLoans(loans, filters);
-  $('#results-count').textContent = `Mostrando ${filtered.length} de ${loans.length} registros carregados`;
+  const visibleLoans = allRecordsView ? filtered : filtered.slice(0, previewLimit);
+  $('#results-count').textContent = `Mostrando ${visibleLoans.length} de ${filtered.length} resultados (${loans.length} registros carregados)`;
+  updateViewLink();
   if (loadingFailed) {
     showEmpty('Não foi possível carregar os dados', 'Tente novamente. Nenhum valor de estoque ou empréstimo foi presumido.', { retry: true });
   } else if (!validRange) {
@@ -113,7 +138,7 @@ function renderLoans() {
   } else if (!filtered.length) {
     showEmpty('Nenhum resultado encontrado', 'Ajuste a pesquisa ou limpe os filtros para visualizar os registros.', { reset: true });
   } else {
-    body.replaceChildren(...filtered.map(renderLoan));
+    body.replaceChildren(...visibleLoans.map(renderLoan));
   }
 }
 
@@ -167,13 +192,6 @@ for (const selector of ['#search', '#status', '#uniform', '#start-date', '#end-d
 }
 filterForm.addEventListener('submit', (event) => event.preventDefault());
 filterForm.addEventListener('reset', (event) => { event.preventDefault(); resetFilters(); });
-document.querySelectorAll('[data-pending]').forEach((button) => {
-  button.title = `${button.dataset.pending}: página pendente de desenvolvimento`;
-  button.addEventListener('click', () => notice.open({
-    title: button.dataset.pending,
-    description: 'Esta página de lavanderia ainda não foi desenvolvida. As operações dependem das próximas páginas e da integração com o backend.',
-    origin: button
-  }));
-});
 
+restoreFiltersFromUrl();
 loadDashboard();

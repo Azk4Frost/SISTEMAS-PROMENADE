@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Listagem completa dos registros carregados de empréstimos e ciclo dos uniformes do Promenade Country Club.">
+  <link rel="icon" href="../../assets/promenade-logo.png">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+  <title>Promenade Hub | Uniformes — Todos os Empréstimos</title>
+</head>
+<body data-loan-view="all" class="min-h-screen bg-slate-50 font-sans text-slate-800 antialiased">
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+  <header class="hub-header">
+    <div class="hub-header-inner">
+      <a class="hub-brand" href="../../index.html" aria-label="Promenade Hub, início">
+        <img src="../../assets/promenade-logo.png" width="52" height="52" alt="">
+        <span>PROMENADE HUB</span>
+      </a>
+      <a class="home-link" href="../../index.html" aria-label="Voltar ao início" title="Voltar ao início">
+        <svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#exit"></use></svg>
+      </a>
+    </div>
+  </header>
+
+  <main id="conteudo" class="dashboard" tabindex="-1">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">Registro de empréstimos e devoluções de uniformes · Promenade Country Club</p>
+        <h1>SISTEMA DE UNIFORMES</h1>
+      </div>
+      <div class="page-actions" aria-label="Operações de uniformes">
+        <a class="button button-blue" href="./novo-emprestimo.html">
+          <svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#plus"></use></svg>Novo Empréstimo
+        </a>
+        <a class="button button-amber" href="./enviar-lavanderia.html">
+          <svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#send"></use></svg>Enviar p/ Lavanderia
+        </a>
+        <a class="button button-green" href="./receber-lavanderia.html">
+          <svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#receive"></use></svg>Receber da Lavanderia
+        </a>
+      </div>
+    </div>
+
+    <section class="inventory-grid grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Disponibilidade de uniformes">
+      <article class="inventory-card" data-uniform="avental">
+        <div class="garment-icon"><svg aria-hidden="true" viewBox="0 0 40 48"><use href="../../assets/icons/ui.svg#apron"></use></svg></div>
+        <div class="garment-description"><h2>AVENTAL</h2><p>Total: <span data-garment-total>—</span></p><p>Disponível: <strong data-available>—</strong></p></div>
+        <div class="stock-total"><span>Em estoque</span><strong data-total>—</strong></div>
+      </article>
+      <article class="inventory-card" data-uniform="camisa-amarela">
+        <div class="garment-icon"><svg aria-hidden="true" viewBox="0 0 40 48"><use href="../../assets/icons/ui.svg#shirt-yellow"></use></svg></div>
+        <div class="garment-description"><h2>CAMISA AMARELA</h2><p>Tamanho: <span>Único</span></p><p>Disponível: <strong data-available>—</strong></p></div>
+        <div class="stock-total"><span>Em estoque</span><strong data-total>—</strong></div>
+      </article>
+      <article class="inventory-card" data-uniform="camisa-branca">
+        <div class="garment-icon"><svg aria-hidden="true" viewBox="0 0 40 48"><use href="../../assets/icons/ui.svg#shirt-white"></use></svg></div>
+        <div class="garment-description"><h2>CAMISA BRANCA</h2><p>Total: <span data-garment-total>—</span></p><p>Disponível: <strong data-available>—</strong></p></div>
+        <div class="stock-total"><span>Em estoque</span><strong data-total>—</strong></div>
+      </article>
+      <article class="inventory-card" data-uniform="calca-azul">
+        <div class="garment-icon"><svg aria-hidden="true" viewBox="0 0 40 48"><use href="../../assets/icons/ui.svg#pants"></use></svg></div>
+        <div class="garment-description"><h2>CALÇA AZUL</h2><p>Total: <span data-garment-total>—</span></p><p>Disponível: <strong data-available>—</strong></p></div>
+        <div class="stock-total"><span>Em estoque</span><strong data-total>—</strong></div>
+      </article>
+    </section>
+
+    <section class="indicators grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Resumo de uniformes">
+      <article class="indicator"><span class="indicator-icon tone-blue"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#users"></use></svg></span><div><h2>Empréstimos Ativos</h2><strong data-indicator="activeLoans">—</strong></div></article>
+      <article class="indicator"><span class="indicator-icon tone-amber"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#return"></use></svg></span><div><h2>Devoluções (Hoje)</h2><strong data-indicator="returnsToday">—</strong></div></article>
+      <article class="indicator"><span class="indicator-icon tone-purple"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#washer"></use></svg></span><div><h2>Na Lavanderia</h2><strong data-indicator="atLaundry">—</strong></div></article>
+      <article class="indicator"><span class="indicator-icon tone-green"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#stock"></use></svg></span><div><h2>Estoque (Total Peças)</h2><strong data-indicator="totalStock">—</strong></div></article>
+    </section>
+
+    <section class="loans-panel" aria-labelledby="loans-title" aria-busy="true">
+      <div class="table-toolbar">
+        <h2 id="loans-title"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#list"></use></svg>CONTROLE DE EMPRÉSTIMOS &amp; CICLO</h2>
+        <div class="table-controls">
+          <div class="search-field">
+            <label class="sr-only" for="search">Buscar por nome ou matrícula</label>
+            <svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#search"></use></svg>
+            <input id="search" type="search" placeholder="Buscar por nome, matrícula…" autocomplete="off" maxlength="120">
+          </div>
+          <label class="sr-only" for="status">Filtrar por status</label>
+          <select id="status">
+            <option value="">Todos os status</option>
+            <option value="com-funcionario">Com Funcionário</option>
+            <option value="em-devolucao">Em Devolução</option>
+            <option value="na-lavanderia">Na Lavanderia</option>
+            <option value="limpo-disponivel">Limpo / Disponível</option>
+          </select>
+          <button class="button button-filter" id="toggle-filters" type="button" aria-expanded="false" aria-controls="extra-filters">
+            <svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#filter"></use></svg><span>Ver Filtros</span>
+          </button>
+          <a class="button button-blue button-view-all" id="loans-view-link" href="./index.html" title="Voltar à prévia do painel">
+            <svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#return"></use></svg>Voltar
+          </a>
+        </div>
+      </div>
+
+      <form id="extra-filters" class="extra-filters" hidden>
+        <div class="field"><label for="uniform">Tipo de uniforme</label><select id="uniform"><option value="">Todos os uniformes</option><option value="avental">Avental</option><option value="camisa-amarela">Camisa amarela</option><option value="camisa-branca">Camisa branca</option><option value="calca-azul">Calça azul</option></select></div>
+        <div class="field"><label for="start-date">Empréstimo a partir de</label><input type="date" id="start-date"></div>
+        <div class="field"><label for="end-date">Empréstimo até</label><input type="date" id="end-date"></div>
+        <button class="button button-secondary" type="reset">Limpar filtros</button>
+        <p id="filter-error" class="filter-error" role="alert" hidden>A data final deve ser igual ou posterior à data inicial.</p>
+      </form>
+
+      <p id="data-notice" class="data-notice" role="status"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#info"></use></svg><span>Carregando dados do painel…</span></p>
+      <noscript><p class="data-notice">Ative o JavaScript para usar pesquisa, filtros e avisos. A integração com os dados operacionais ainda está pendente.</p></noscript>
+
+      <div class="table-scroll" role="region" aria-label="Tabela de empréstimos, com rolagem horizontal" tabindex="0">
+        <table>
+          <caption class="sr-only">Todos os registros carregados de empréstimos de uniformes e acompanhamento do ciclo</caption>
+          <thead><tr><th scope="col">CÓD. EMPRÉST.</th><th scope="col">FUNCIONÁRIO / SETOR</th><th scope="col">ITENS / TAMANHOS</th><th scope="col">STATUS DO CICLO</th><th scope="col">ÚLTIMA ATUALIZAÇÃO</th><th scope="col">AÇÕES RÁPIDAS</th></tr></thead>
+          <tbody id="loans-body"><tr><td colspan="6"><div class="empty-state"><svg class="icon" aria-hidden="true"><use href="../../assets/icons/ui.svg#clipboard"></use></svg><h3>Carregando empréstimos…</h3><p>Aguarde a consulta dos dados.</p></div></td></tr></tbody>
+        </table>
+      </div>
+      <div class="table-bottom"><p id="results-count" role="status" aria-live="polite">Consultando registros</p><span class="realtime-status"><span class="status-dot" aria-hidden="true"></span><span id="connection-label">Conexão pendente</span></span></div>
+    </section>
+    <footer class="dashboard-footer"><a href="../../sistemas.html">Promenade Country Club <span aria-hidden="true">/</span> Sistemas</a><span>Gestão de Uniformes · Listagem completa</span></footer>
+  </main>
+
+</body>
+</html>

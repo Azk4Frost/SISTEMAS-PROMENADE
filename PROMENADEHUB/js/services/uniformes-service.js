@@ -57,3 +57,30 @@ export async function registerUniformesLoan() {
 export async function saveUniformesLoanDraft() {
   throw new UniformesIntegrationError('Salvar rascunho');
 }
+
+/** Página 03: a elegibilidade deve ser fornecida pelo backend, nunca inferida do status.
+ * { connection: 'ready' | 'not-configured', items: [{ id, loanCode,
+ *   employee: { id, name, department }, uniform: { id, label, size, icon },
+ *   loanDate: 'YYYY-MM-DD', status: { label, tone }, eligible: boolean }] }
+ * Cada linha representa um item identificável; itens sem elegibilidade não são selecionáveis.
+ * O servidor deverá revalidar permissões e elegibilidade ao efetuar o envio.
+ */
+export async function loadLaundryDispatchItems() {
+  return { connection: 'not-configured', items: [] };
+}
+export async function dispatchUniformesToLaundry() {
+  throw new UniformesIntegrationError('Envio para a lavanderia');
+}
+
+/** Página 04: o backend deve informar os itens e sua elegibilidade para recebimento.
+ * Mesmo contrato de itens da página 03, com sentDate ('YYYY-MM-DD') em vez de loanDate.
+ * Campo adicional do contexto: afterReceiptStatus: { label: string } | null.
+ * O status após recebimento é uma informação do backend, não uma transição definida na tela.
+ * O servidor deverá revalidar permissões, elegibilidade e aplicar a transação efetiva.
+ */
+export async function loadLaundryReceiptItems() {
+  return { connection: 'not-configured', items: [], afterReceiptStatus: null };
+}
+export async function receiveUniformesFromLaundry() {
+  throw new UniformesIntegrationError('Recebimento da lavanderia');
+}

@@ -1,0 +1,12 @@
+/* Acentos da referência 04 sobre os componentes compartilhados de lavanderia. */
+.receipt-page .laundry-heading-icon { background: #dcf7e8; color: #0ba161; }
+.receipt-page .laundry-section-heading .icon { color: #17a56d; }
+.receipt-page .selection-count { background: #e3f8eb; color: #187b4b; }
+.receipt-page .dispatch-notice { background: #f2fcf6; border-color: #dbf0e3; color: #55816a; }
+.receipt-page .dispatch-notice.is-error { background: #fff5f3; border-color: #efcece; color: #a43d3d; }
+.receipt-page .dispatch-table input[type='checkbox'] { accent-color: #0a9c64; }
+.receipt-page .dispatch-table tr.is-selected { background: #f3fcf7; }
+.receipt-page .dispatch-empty > .icon { color: #94cbb0; }
+.receipt-page .dispatch-help { color: #698a79; }
+.receipt-page .button-green:disabled { background: #9acfb8; border-color: #9acfb8; cursor: not-allowed; }
+.receipt-page #summary-after-status { color: #168b59; max-width: 135px; text-align: right; }
